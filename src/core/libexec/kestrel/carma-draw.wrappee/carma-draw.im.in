@@ -1,0 +1,1442 @@
+#! /bin/sh -
+#
+# Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This script uses the SST Bash library to bootstrap from /bin/sh into
+# bash. See the Bash library > Bootstrapping section of the SST manual
+# for more information.
+#
+
+#-----------------------------------------------------------------------
+# Load the prelude
+#-----------------------------------------------------------------------
+
+case ${USE_BUILD_TREE-} in '')
+  set -e || exit $?
+  . '{@}pkgdatadir{@}/bash/sst.bash'
+;; *)
+  case $0 in /*) x=$0 ;; *) x=./$0 ;; esac
+  r='\(.*/\)'
+  x=`expr "$x" : "$r"`. || exit $?
+  set -e || exit $?
+  . "$x/../../../../../src/bash/sst.bash"
+esac
+
+#-----------------------------------------------------------------------
+
+config_dir=$1
+if [[ "$config_dir" != [/.]* ]]; then
+  config_dir=./$config_dir
+fi
+readonly config_dir
+
+abs_config_dir=$(cd "$config_dir"; pwd; echo x)
+abs_config_dir=${abs_config_dir%??}
+readonly abs_config_dir
+
+r='^.*/(.*)/configs/ta1/carma.*$'
+if [[ "$abs_config_dir" =~ $r ]]; then
+  deployment_name=${BASH_REMATCH[1]}
+else
+  deployment_name=$abs_config_dir
+fi
+readonly deployment_name
+
+ta1_request=$config_dir/network-manager-request.json
+readonly ta1_request
+
+# TODO: all_node_configs.json no longer exists, which breaks a ton of
+#       stuff in this script. We need an updated approach that scales to
+#       large deployments (10000+ nodes).
+
+all_node_configs=$config_dir/all_node_configs.json
+readonly all_node_configs
+
+channel_list=$config_dir/channel_list.json
+readonly channel_list
+
+#-----------------------------------------------------------------------
+
+jq_script=$(cat <<'EOF'
+
+  #---------------------------------------------------------------------
+  # single-file.sh \
+  #   sst_adjacent_pairs \
+  #   sst_graphviz_quote \
+  #   sst_html_escape \
+  #   sst_nwise \
+  # ;
+  #---------------------------------------------------------------------
+
+  def sst_assert($x; $message): .
+  | if $x then
+      .
+    else
+      error($message)
+    end
+  ;
+  def sst_adjacent_pairs: .
+  | sst_assert(
+      type == "array";
+      "sst_adjacent_pairs: input must be an array"
+    )
+  | [while(length > 1; .[1:])[:2]]
+  ;
+  def sst_graphviz_escape: .
+  | sst_assert(.
+    | type == "string"
+    ; "sst_graphviz_escape:"
+    + " the input must be a string"
+    )
+  | gsub("\""; "\\\"")
+  ;
+  def sst_graphviz_quote: .
+  | sst_assert(.
+    | type == "string"
+    ; "sst_graphviz_quote:"
+    + " the input must be a string"
+    )
+  | "\"" + sst_graphviz_escape + "\""
+  ;
+  def sst_html_escape: .
+  | sst_assert(.
+    | type == "string"
+    ; "sst_html_escape:"
+    + " the input must be a string"
+    )
+  | gsub("&"; "&amp;")
+  | gsub("<"; "&lt;")
+  | gsub(">"; "&gt;")
+  ;
+  def sst_nwise($n): .
+  | sst_assert(
+      type == "array";
+      "sst_nwise: input must be an array"
+    )
+  | sst_assert(
+      ($n | type == "number") and ($n > 0) and ($n == ($n | floor));
+      "sst_nwise: n must be a positive integer"
+    )
+  | [while(length > 0; .[$n:])[:$n]]
+  ;
+
+  #---------------------------------------------------------------------
+
+  #
+  # Formats an array of node names as a 2D matrix with at most $n rows.
+  # The first $n elements of the array become the first column of the
+  # matrix, the next $n the second column, and so on. If $n does not
+  # divide the length of the array, the last column is padded with
+  # nulls. As a last step, all nulls are replaced with dummy names
+  # derived from $salt.
+  #
+  # Note that the meaning of the word "rows" here assumes rankdir = LR.
+  # If rankdir = TB, the rows will really be columns.
+  #
+
+  def make_matrix($n; $salt): .
+  | sst_nwise($n)
+  | transpose
+  | to_entries
+  | map(.
+    | .key as $i
+    | .value
+    | to_entries
+    | map(.
+      | .key as $j
+      | .value
+      | if . != null then .
+        | .
+        else .
+        | (""
+          + $salt
+          + "_"
+          + ($i | tostring)
+          + "_"
+          + ($j | tostring)
+          + "_dummy"
+          )
+        end
+      )
+    )
+  ;
+
+  #
+  # Given an arbitrary depth array of node names, returns Graphviz code
+  # that declares any *_dummy nodes as invisible.
+  #
+
+  def declare_dummy_nodes($width): .
+  | flatten
+  | map(.
+    | select(test("_dummy$"))
+    | (""
+      + (. | sst_graphviz_quote)
+      + " ["
+      + "style = invis, "
+      + "label = " + ("x" * $width) + ", "
+      + "];\n"
+      )
+    )
+  | join("")
+  ;
+
+  #
+  # Given a matrix of node names, returns Graphviz code that declares
+  # edges to pin each row together.
+  #
+
+  def declare_row_pins: .
+  | sst_assert(
+      flatten | all(type == "string");
+      "declare_row_pins: the input must be a matrix of strings"
+    )
+  | map(.
+    | sst_adjacent_pairs
+    | map(""
+      + (.[0] | sst_graphviz_quote)
+      + " -> "
+      + (.[1] | sst_graphviz_quote)
+      + " ["
+      + "style = invis, "
+      + "];\n"
+      )
+    | join("")
+    )
+  | join("")
+  ;
+
+  #
+  # Given a matrix of node names, returns Graphviz code that declares
+  # edges to pin each column together.
+  #
+
+  def declare_col_pins: .
+  | sst_assert(
+      flatten | all(type == "string");
+      "declare_col_pins: the input must be a matrix of strings"
+    )
+  | transpose
+  | map(.
+    | [
+        (""
+        + "{\n"
+        + "rank = same;\n"
+        )
+      ,
+        (.
+        | sst_adjacent_pairs
+        | map(""
+          + (.[1] | sst_graphviz_quote)
+          + " -> "
+          + (.[0] | sst_graphviz_quote)
+          + " ["
+          + "style = invis, "
+          + "];\n"
+          )
+        )
+      ,
+        "}\n"
+      ]
+    )
+  | flatten
+  | add
+  ;
+
+  #
+  # Returns an $n x 1 matrix of dummy node names.
+  #
+
+  def make_dummy_matrix($n; $salt): .
+  | [range($n)]
+  | map(null)
+  | make_matrix($n; $salt)
+  ;
+
+  #
+  # Given an array of matrices, returns Graphviz code that attaches each
+  # adjacent pair of matrices together by creating a complete bipartite
+  # graph of invisible edges between the rightmost column of the first
+  # matrix and the leftmost column of the second matrix.
+  #
+
+  def attach_matrices: .
+  | sst_adjacent_pairs
+  | map(.
+    | (.[0] | transpose[-1][]) as $x
+    | (.[1] | transpose[0][]) as $y
+    | (""
+      + ($x | sst_graphviz_quote)
+      + " -> "
+      + ($y | sst_graphviz_quote)
+      + " ["
+      + "style = invis, "
+      + "];\n"
+      )
+    )
+  | add
+  ;
+
+  #
+  # Given an array of strings, returns a map that maps each string to a
+  # trailing number, if possible. Otherwise, returns the identity map.
+  #
+
+  def make_abbrev_map: .
+  | (map({key: ., value: .}) | from_entries) as $identity
+  | if all(test("[0-9]+")) then .
+    | map(sub(".*?0*(?<n>[0-9]+)$"; .n)) as $numbers
+    | if length == ($numbers | unique | length) then .
+      | [., $numbers]
+      | transpose
+      | map({key: .[0], value: .[1] | tonumber})
+      | from_entries
+      else .
+      | $identity
+      end
+    else .
+    | $identity
+    end
+  ;
+
+  #
+  # Returns the number of decimal digits in the input.
+  #
+
+  def num_digits: .
+  | sst_assert(.
+    | . >= 0 and floor == .
+    ; "num_digits:"
+    + " the input must be a nonnegative integer"
+    )
+  | if . == 0 then .
+    | 1
+    else .
+    | floor + 1
+    | log10
+    | ceil
+    end
+  ;
+
+  #
+  # Returns an HTML string of the input prepended with figure spaces to
+  # pad it to $width, if necessary.
+  #
+
+  def html_aligned_int($width): .
+  | sst_assert(.
+    | . >= 0 and floor == .
+    ; "html_aligned_int:"
+    + " the input must be a nonnegative integer"
+    )
+  | sst_assert(.
+    | $width > 0 and ($width | floor) == $width
+    ; "html_aligned_int:"
+    + " $width must be a positive integer"
+    )
+  | ($width - num_digits) * "&#8199;" + (. | tostring)
+  ;
+
+  #
+  #
+
+  def plural($n): .
+  | if $n == 1 then "" else "s" end
+  ;
+
+  #---------------------------------------------------------------------
+  # Input file parsing
+  #---------------------------------------------------------------------
+
+  .
+  | .[0] as $all_node_configs
+  | .[1] as $ta1_request
+  | .[2] as $channel_list
+
+  #---------------------------------------------------------------------
+  # Hardcoded diagram settings
+  #---------------------------------------------------------------------
+
+  | 30 as $client_rows
+  | 30 as $mb_server_rows
+  | 10 as $mc_server_rows
+  | 5 as $mc_group_rows
+  | 30 as $idle_server_rows
+  | 30 as $spacer_width
+  | ("&nbsp;" * 5) as $indent
+  | "5" as $taillabel_cellpadding
+
+  #---------------------------------------------------------------------
+
+  # TODO: Read in this value from the configs.
+  |(.
+  | 5
+  ) as $mbs_per_client
+
+  |(.
+  | $all_node_configs
+  | any(.allow_multicast)
+  ) as $allow_multicast
+
+  |(.
+  | $all_node_configs
+  | any(.leader_relay_only)
+  ) as $leader_relay_only
+
+  |(.
+  | $all_node_configs
+  | any(.inter_server_direct_only)
+  ) as $inter_server_direct_only
+
+  |(.
+  | $all_node_configs
+  | to_entries
+  | map(.value | select(.role == "client") | .pseudonym)
+  | make_abbrev_map
+  ) as $client_abbrev
+
+  |(.
+  | $client_abbrev
+  | keys_unsorted
+  | sort_by($client_abbrev[.])
+  ) as $client_names
+
+  |(.
+  | $client_names
+  | length
+  ) as $client_count
+
+  |(.
+  | $client_names
+  | make_matrix($client_rows; "client")
+  ) as $client_matrix
+
+  |(.
+  | $all_node_configs
+  | to_entries
+  | map(.value | select(.role == "mb_server") | .pseudonym)
+  | make_abbrev_map
+  ) as $mb_server_abbrev
+
+  |(.
+  | $mb_server_abbrev
+  | keys_unsorted
+  | sort_by($mb_server_abbrev[.])
+  ) as $mb_server_names
+
+  |(.
+  | $mb_server_names
+  | length
+  ) as $mb_server_count
+
+  |(.
+  | $mb_server_names
+  | make_matrix($mb_server_rows; "mb_server")
+  ) as $mb_server_matrix
+
+  |(.
+  | $all_node_configs
+  | to_entries
+  | map(.value | select(.role | test("^mc_")) | .pseudonym)
+  | make_abbrev_map
+  ) as $mc_server_abbrev
+
+  |(.
+  | $mc_server_abbrev
+  | keys_unsorted
+  | sort_by($mc_server_abbrev[.])
+  ) as $mc_server_names
+
+  |(.
+  | $mc_server_names
+  | length
+  ) as $mc_server_count
+
+  |(.
+  | $all_node_configs
+  | map(.mc_group | select(.))
+  | unique
+  | to_entries
+  ) as $mc_groups
+
+  |(.
+  | $mc_groups
+  | length
+  ) as $mc_group_count
+
+  |(.
+  | $mc_groups
+  | map(.value | length)
+  | min
+  ) as $min_mc_group_size
+
+  |(.
+  | $mc_groups
+  | map(.value | length)
+  | max
+  ) as $max_mc_group_size
+
+  |(.
+  | $mc_groups
+  | map(.value | length)
+  | (add / length + 0.05) * 10
+  | floor
+  ) as $avg_mc_group_size_times_10
+
+  |(.
+  | $mc_groups
+  | map(.value | length)
+  | max
+  ) as $max_mc_group_size
+
+  |(.
+  | $mc_groups
+  | map([.key as $k | .value[] | {key: ., value: $k}])
+  | add
+  | from_entries
+  ) as $mc_server_to_mc_group_index
+
+  |(.
+  | $mc_groups
+  | map(.
+    | .key as $k
+    | {
+        key,
+        value: (.
+        | .value
+        | sort_by($mc_server_abbrev[.])
+        | if length < $max_mc_group_size then .
+          | . + [range($max_mc_group_size - length) | null]
+          else .
+          | .
+          end
+        | make_matrix(
+            $mc_server_rows;
+            "mc_group_" + ($k | tostring)
+          )
+        )
+      }
+    )
+  ) as $mc_group_matrices
+
+  |(.
+  | $mc_group_matrices
+  | map(.value)
+  | sst_nwise($mc_group_rows)
+  | transpose
+  | map(map(select(.)))
+  ) as $mc_group_matrix_matrix
+
+  |(.
+  | make_dummy_matrix(1; "client_mb_spacer")
+  ) as $client_mb_spacer_matrix
+
+  |(.
+  | make_dummy_matrix(1; "mb_mc_spacer")
+  ) as $mb_mc_spacer_matrix
+
+  |(.
+  | make_dummy_matrix(1; "mc_idle_spacer")
+  ) as $mc_idle_spacer_matrix
+
+  |(.
+  | $all_node_configs
+  | map(select(.role == "idle_server") | .pseudonym)
+  ) as $idle_server_names
+
+  |(.
+  | $idle_server_names
+  | length
+  ) as $idle_server_count
+
+  |(0
+  + (.
+    | $mc_groups
+    | map(.value | length | . * (. - 1))
+    | add
+    )
+  + (.
+    | $mb_server_names
+    | map($all_node_configs[.].mc_group | length)
+    | add
+    )
+  + if $leader_relay_only then .
+    | $mb_server_count * $mc_group_count
+    else .
+    | $mb_server_count * $mc_server_count
+    end
+  ) as $num_potential_direct_links
+
+  |(0
+  + $client_count * 2 * $mbs_per_client
+  + if $inter_server_direct_only then .
+    | 0
+    else .
+    | $num_potential_direct_links
+    end
+  ) as $num_potential_indirect_links
+
+  |(.
+  | if $allow_multicast then .
+    | $mb_server_count
+    else .
+    | 0
+    end
+  ) as $num_potential_multicast_links
+
+  |(.
+  | [
+      $client_count,
+      $mb_server_count,
+      $mc_server_count,
+      $idle_server_count
+    ]
+  | max
+  | num_digits
+  ) as $legend_digit_count_1
+
+  |(.
+  | [
+      $avg_mc_group_size_times_10 / 10 | floor,
+      $min_mc_group_size,
+      $max_mc_group_size
+    ]
+  | max
+  | num_digits
+  ) as $legend_digit_count_2
+
+  |(.
+  | [
+      $num_potential_direct_links,
+      $num_potential_indirect_links,
+      $num_potential_multicast_links
+    ]
+  | max
+  | num_digits
+  ) as $legend_digit_count_3
+
+  |(.
+  | $channel_list
+  | map({key: .channelGid, value: .})
+  | from_entries
+  ) as $channel_map
+
+  |(.
+  | $ta1_request.links
+  | map(.channels)
+  | flatten
+  | unique
+  | sort_by(ascii_upcase)
+  | map(""
+    + .
+    + if $channel_map[.].connectionType == "CT_DIRECT" then .
+      | " (direct"
+      elif $channel_map[.].connectionType == "CT_INDIRECT" then .
+      | " (indirect"
+      else .
+      | " (<unknown connection type>"
+      end
+    + if $channel_map[.].transmissionType == "TT_UNICAST" then .
+      | ", unicast)"
+      elif $channel_map[.].transmissionType == "TT_MULTICAST" then .
+      | ", multicast)"
+      else .
+      | ", <unknown transmission type>)"
+      end
+    )
+  ) as $channel_entries
+
+  |(.
+  | $idle_server_names
+  | select(. != []) // [null]
+  | make_matrix($idle_server_rows; "idle_server")
+  ) as $idle_server_matrix
+
+  |(""
+  + "subgraph cluster_client_nodes {\n"
+  + "label = \"Clients\";\n"
+  + (.
+    | $client_names
+    | map(""
+      + (. | sst_graphviz_quote)
+      + " ["
+      + "style = filled, "
+      + "fillcolor = white, "
+      + "];"
+      )
+    | join("\n")
+    )
+  + "\n"
+  + ($client_matrix | declare_dummy_nodes(1))
+  + ($client_matrix | declare_row_pins)
+  + ($client_matrix | declare_col_pins)
+  + "}\n"
+  ) as $cluster_client_nodes
+
+  |(""
+  + "subgraph cluster_client_mb_spacer {\n"
+  + "style = invis;\n"
+  + ($client_mb_spacer_matrix | declare_dummy_nodes($spacer_width))
+  + ($client_mb_spacer_matrix | declare_row_pins)
+  + ($client_mb_spacer_matrix | declare_col_pins)
+  + "}\n"
+  ) as $cluster_client_mb_spacer
+
+  |(""
+  + "subgraph cluster_mb_servers {\n"
+  + "label = \"Mailbox servers\";\n"
+  + (.
+    | $mb_server_names
+    | map(""
+      + (. | sst_graphviz_quote)
+      + " ["
+      + "shape = box, "
+      + "style = filled, "
+      + "fillcolor = white, "
+      + "];"
+      )
+    | join("\n")
+    )
+  + "\n"
+  + ($mb_server_matrix | declare_dummy_nodes(1))
+  + ($mb_server_matrix | declare_row_pins)
+  + ($mb_server_matrix | declare_col_pins)
+  + "}\n"
+  ) as $cluster_mb_servers
+
+  |(""
+  + "subgraph cluster_mb_mc_spacer {\n"
+  + "style = invis;\n"
+  + ($mb_mc_spacer_matrix | declare_dummy_nodes($spacer_width))
+  + ($mb_mc_spacer_matrix | declare_row_pins)
+  + ($mb_mc_spacer_matrix | declare_col_pins)
+  + "}\n"
+  ) as $cluster_mb_mc_spacer
+
+  |(""
+  + "subgraph cluster_mc_servers {\n"
+  + "style = invis;\n"
+  + (.
+    | $mc_groups
+    | map(""
+      + "subgraph cluster_mc_group_" + (.key | tostring) + " {\n"
+      + "style = \"\";\n"
+      + (""
+        + "label = <<table "
+        + "bgcolor=\"white\" "
+        + "border=\"0\" "
+        + "cellborder=\"0\" "
+        + "cellpadding=\"5\" "
+        + "cellspacing=\"0\" "
+        + "><tr><td>"
+        + "Management committee group "
+        + (.key + 1 | tostring)
+        + "</td></tr></table>>"
+        )
+      + ";\n"
+      + (.
+        | .value
+        | map(""
+          + (. | sst_graphviz_quote)
+          + " ["
+          + "shape = box, "
+          + "style = filled, "
+          + "fillcolor = white, "
+          + if $all_node_configs[.].role == "mc_leader" then
+              "peripheries = 3, "
+            else
+              ""
+            end
+          + "];"
+          )
+        | join("\n")
+        )
+      + "\n"
+      + ($mc_group_matrices[.key].value | declare_dummy_nodes(1))
+      + ($mc_group_matrices[.key].value | declare_row_pins)
+      + ($mc_group_matrices[.key].value | declare_col_pins)
+      + "}"
+      )
+    | join("\n")
+    | . + "\n"
+    )
+  + ($mc_group_matrix_matrix | map(attach_matrices) | join(""))
+  + "}\n"
+  ) as $cluster_mc_servers
+
+  |(""
+  + "subgraph cluster_mc_idle_spacer {\n"
+  + "style = invis;\n"
+  + ($mc_idle_spacer_matrix | declare_dummy_nodes($spacer_width))
+  + ($mc_idle_spacer_matrix | declare_row_pins)
+  + ($mc_idle_spacer_matrix | declare_col_pins)
+  + "}\n"
+  ) as $cluster_mc_idle_spacer
+
+  |(""
+  + "subgraph cluster_idle_servers {\n"
+  + "label = \"Idle servers\";\n"
+  + (.
+    | $idle_server_names
+    | map(""
+      + (. | sst_graphviz_quote)
+      + " ["
+      + "shape = box, "
+      + "style = filled, "
+      + "fillcolor = white, "
+      + "];"
+      )
+    | join("\n")
+    )
+  + "\n"
+  + ($idle_server_matrix | declare_dummy_nodes(1))
+  + ($idle_server_matrix | declare_row_pins)
+  + ($idle_server_matrix | declare_col_pins)
+  + "}\n"
+  ) as $cluster_idle_servers
+
+  |(.
+  | [
+      $client_matrix,
+      $client_mb_spacer_matrix,
+      $mb_server_matrix,
+      $mb_mc_spacer_matrix
+    ]
+  | attach_matrices
+  ) as $spacer_edges_1
+
+  |(.
+  | $mc_group_matrix_matrix
+  | map([$mb_mc_spacer_matrix, .[0]] | attach_matrices)
+  | join("")
+  ) as $spacer_edges_2
+
+  |(.
+  | $mc_group_matrix_matrix
+  | map([.[-1], $mc_idle_spacer_matrix] | attach_matrices)
+  | add
+  ) as $spacer_edges_3
+
+  |(.
+  | [$mc_idle_spacer_matrix, $idle_server_matrix]
+  | attach_matrices
+  ) as $spacer_edges_4
+
+  |(.
+  | $client_names
+  | map(""
+    + (. | sst_graphviz_quote)
+    + ":e -> "
+    + ($all_node_configs[.].mb_server | sst_graphviz_quote)
+    + ":w ["
+    + "dir = both, "
+    + "constraint = false, "
+    + "color = gray70, "
+    + "taillabel = <<table"
+    + " border=\"1\""
+    + " cellborder=\"0\""
+    + " cellpadding=\"" + $taillabel_cellpadding + "\""
+    + " cellspacing=\"0\""
+    + " bgcolor=\"white\""
+    + "><tr><td>"
+    + (.
+      | $mb_server_abbrev[$all_node_configs[.].mb_server]
+      | tostring
+      | sst_html_escape
+      )
+    + "</td></tr></table>>, "
+    + "];\n"
+    )
+  | join("")
+  ) as $client_mb_edges
+
+  |(.
+  | $mb_server_names
+  | map(.
+    | . as $x
+    | [.
+      | $all_node_configs[$x].mc_group
+      | to_entries
+      | .[]
+      | .key as $i
+      | .value as $y
+      | (""
+        + ($x | sst_graphviz_quote)
+        + ":e -> "
+        + ($y | sst_graphviz_quote)
+        + ":w ["
+        + "constraint = false, "
+        + "color = gray70, "
+        + if $i == 0 then ""
+          + "taillabel = <<table"
+          + " border=\"1\""
+          + " cellborder=\"0\""
+          + " cellpadding=\"" + $taillabel_cellpadding + "\""
+          + " cellspacing=\"0\""
+          + " bgcolor=\"white\""
+          + "><tr><td>"
+          + ($mc_server_to_mc_group_index[$y] + 1 | tostring)
+          + "</td></tr></table>>, "
+          else ""
+          + ""
+          end
+        + "];\n"
+        )
+      ]
+    | add
+    )
+  | add
+  ) as $mb_mc_edges
+
+  |(.
+  | if $leader_relay_only then
+      (.
+      | $mc_groups
+      | map([.
+        | .value
+        | map(select($all_node_configs[.].role == "mc_leader"))[0] as $x
+        | $mb_server_names[] as $y
+        | (""
+          + ($x | sst_graphviz_quote)
+          + ":w -> "
+          + ($y | sst_graphviz_quote)
+          + ":e ["
+          + "constraint = false, "
+          + "color = gray70, "
+          + "];\n"
+          )
+        ])
+      | flatten
+      | join("")
+      )
+    else
+      (.
+      | $mc_groups
+      | map([.
+        | .value[] as $x
+        | $mb_server_names[] as $y
+        | (""
+          + ($x | sst_graphviz_quote)
+          + ":w -> "
+          + ($y | sst_graphviz_quote)
+          + ":e ["
+          + "constraint = false, "
+          + "color = gray70, "
+          + "];\n"
+          )
+        ])
+      | flatten
+      | join("")
+      )
+    end
+  ) as $mc_mb_edges
+
+  | (""
+    + "strict digraph {\n"
+    + (""
+      + "label = <"
+      + "<font point-size=\"20\">"
+      + "<table border=\"0\" cellspacing=\"0\">"
+      + "<tr><td>"
+      + "<font point-size=\"40\">"
+      + "CARMA deployment"
+      + "</font>"
+      + "</td></tr>"
+      + "<tr><td>"
+      + ($deployment_name | sst_html_escape)
+      + "</td></tr>"
+      + "<tr><td>"
+      + "<br align=\"left\"/>"
+      + ($client_count | html_aligned_int($legend_digit_count_1))
+      + " client"
+      + plural($client_count)
+      + "<br align=\"left\"/>"
+      + ($idle_server_count | html_aligned_int($legend_digit_count_1))
+      + " idle server"
+      + plural($idle_server_count)
+      + "<br align=\"left\"/>"
+      + ($mb_server_count | html_aligned_int($legend_digit_count_1))
+      + " mailbox server"
+      + plural($mb_server_count)
+      + "<br align=\"left\"/>"
+      + ($mc_server_count | html_aligned_int($legend_digit_count_1))
+      + " management committee server"
+      + plural($mc_server_count)
+      + "<br align=\"left\"/>"
+      + $indent
+      + ($mc_group_count | tostring)
+      + " management committee group"
+      + plural($mc_group_count)
+      + "<br align=\"left\"/>"
+      + $indent * 2
+      + (.
+        | $avg_mc_group_size_times_10 / 10
+        | floor
+        | html_aligned_int($legend_digit_count_2)
+        )
+      + (.
+        | $avg_mc_group_size_times_10
+        | tostring
+        | sub(".*(?<x>.)$"; "." + .x)
+        )
+      + " average group size"
+      + "<br align=\"left\"/>"
+      + $indent * 2
+      + ($min_mc_group_size | html_aligned_int($legend_digit_count_2))
+      + "&#8200;&#8199;"
+      + " minimum group size"
+      + "<br align=\"left\"/>"
+      + $indent * 2
+      + ($max_mc_group_size | html_aligned_int($legend_digit_count_2))
+      + "&#8200;&#8199;"
+      + " maximum group size"
+      + "<br align=\"left\"/>"
+      + "<br align=\"left\"/>"
+      + (.
+        | $num_potential_direct_links
+        | html_aligned_int($legend_digit_count_3)
+        )
+      + " potential direct link"
+      + plural($num_potential_direct_links)
+      + "<br align=\"left\"/>"
+      + (.
+        | $num_potential_indirect_links
+        | html_aligned_int($legend_digit_count_3)
+        )
+      + " potential indirect link"
+      + plural($num_potential_indirect_links)
+      + "<br align=\"left\"/>"
+      + (.
+        | $num_potential_multicast_links
+        | html_aligned_int($legend_digit_count_3)
+        )
+      + " potential multicast link"
+      + plural($num_potential_multicast_links)
+      + "<br align=\"left\"/>"
+      + "<br align=\"left\"/>"
+      + "Channels:"
+      + "<br align=\"left\"/>"
+      + (.
+        | $channel_entries
+        | map(""
+          + $indent
+          + (. | sst_html_escape)
+          + "<br align=\"left\"/>"
+          )
+        | add
+        )
+      + "</td></tr>"
+      + "</table>"
+      + "</font>"
+      + ">;\n"
+      )
+    + "labelloc = t;\n"
+    + "nodesep = 0.1;\n"
+    + "outputorder = edgesfirst;\n"
+    + "rankdir = LR;\n"
+    + "ranksep = 0.5;\n"
+    + "remincross = false;\n"
+    + "splines = false;\n"
+    + $cluster_client_nodes
+    + $cluster_client_mb_spacer
+    + $cluster_mb_servers
+    + $cluster_mb_mc_spacer
+    + $cluster_mc_servers
+    + $cluster_mc_idle_spacer
+    + $cluster_idle_servers
+    + $spacer_edges_1
+    + $spacer_edges_2
+    + $spacer_edges_3
+    + $spacer_edges_4
+    + $client_mb_edges
+    + $mb_mc_edges
+    + $mc_mb_edges
+    + "}"
+    )
+EOF
+)
+readonly jq_script
+
+#-----------------------------------------------------------------------
+
+gvpr_script=$(cat <<'EOF'
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+//
+// This script converts labels and other label-ish entities into nodes,
+// which, when combined with outputorder = edgesfirst, prevents edges
+// from being drawn on top of them.
+//
+// Note that all variables in gvpr are global regardless of where they
+// are declared.
+//
+
+BEGIN {
+
+  string name_f = "zlabel_%d";
+  int name_i = 0;
+
+  int ds_seen[string];
+  int ds_i = 0;
+  graph_t ds_g1[int];
+  graph_t ds_g2[int];
+  void do_subgraph() {
+    if (hasAttr(ds_g1[ds_i], "lp")) {
+      if (!ds_seen[ds_g1[ds_i].lp] && ds_g1[ds_i].style != "invis") {
+        ds_seen[ds_g1[ds_i].lp] = 1;
+        node_t ds_n = node(ds_g1[ds_i], sprintf(name_f, name_i++));
+        ds_n.label = ds_g1[ds_i].label;
+        ds_n.pos = ds_g1[ds_i].lp;
+        ds_n.shape = "none";
+      }
+      ds_g1[ds_i].label = "";
+      ds_g1[ds_i].lp = "";
+    }
+    if (index(ds_g1[ds_i].name, "cluster_") == 0) {
+      node_t ds_n2 = node(ds_g1[ds_i], sprintf(name_f, name_i++));
+      string ds_n2r[int];
+      split(ds_g1[ds_i].bb, ds_n2r, ",");
+      double ds_n2x1 = (double)ds_n2r[0];
+      double ds_n2y1 = (double)ds_n2r[1];
+      double ds_n2x2 = (double)ds_n2r[2];
+      double ds_n2y2 = (double)ds_n2r[3];
+      double ds_n2x = (ds_n2x1 + ds_n2x2) / 2;
+      double ds_n2y = (ds_n2y1 + ds_n2y2) / 2;
+      ds_n2.height = (ds_n2y2 - ds_n2y1) / 72;
+      ds_n2.label = "";
+      if (hasAttr(ds_g1[ds_i], "peripheries")) {
+        ds_n2.peripheries = ds_g1[ds_i].peripheries;
+      }
+      ds_n2.pos = sprintf("%f,%f", ds_n2x, ds_n2y);
+      ds_n2.shape = "box";
+      ds_n2.style = ds_g1[ds_i].style;
+      ds_n2.width = (ds_n2x2 - ds_n2x1) / 72;
+      ds_g1[ds_i].peripheries = 0;
+    }
+    ds_g2[ds_i] = fstsubg(ds_g1[ds_i]);
+    while (ds_g2[ds_i] != NULL) {
+      ++ds_i;
+      ds_g1[ds_i] = ds_g2[ds_i - 1];
+      do_subgraph();
+      --ds_i;
+      ds_g2[ds_i] = nxtsubg(ds_g2[ds_i]);
+    }
+  }
+
+}
+
+BEG_G {
+  ds_g1[0] = $G;
+  do_subgraph();
+}
+
+E {
+  if (taillabel) {
+    node_t n_taillabel = node($G, sprintf(name_f, name_i++));
+    n_taillabel.label = taillabel;
+    n_taillabel.pos = tail_lp;
+    n_taillabel.shape = "none";
+    tail_lp = "";
+    taillabel = "";
+  }
+}
+
+END_G {
+  write($);
+}
+
+EOF
+)
+
+  jq \
+    --arg deployment_name "$deployment_name" \
+    -r \
+    -s \
+    "$jq_script" \
+    "$all_node_configs" \
+    "$ta1_request" \
+    "$channel_list" \
+| awk '
+    # This script indents the graph code to make it easier to read.
+    {
+      if (/}$/) {
+        indent = substr(indent, 1, length(indent) - 2)
+      }
+      print indent $0
+      if (/{$/) {
+        indent = indent "  "
+      }
+    }
+  ' \
+| tee \
+    graph.dot \
+| dot \
+    -Tdot \
+| gvpr \
+    -c "$gvpr_script" \
+| neato \
+    -n2 \
+    -Tpng \
+;
+
+  #---------------------------------------------------------------------
+  # Old implementation
+  #---------------------------------------------------------------------
+
+  # printf '%s\n' '
+  #   strict graph G {
+  #     outputorder = edgesfirst;
+  #     overlap = false;
+  #     rankdir = LR;
+  #     ranksep = 3;
+  #     nodesep = 0.02;
+  #     clients [group = "counts"];
+  #     mb_servers [group = "counts"];
+  #     mc_servers [group = "counts"];
+  #     clients -- mb_servers [style = invisible];
+  #     mb_servers -- mc_servers [style = invisible];
+  #     mc_servers -- idle_servers [style = invisible, minlen = 2];
+  # '
+  #
+  # # Put invisible edges between successive nodes of each type to order
+  # # them consistently.
+  # for role_regex in \
+  #   'client' \
+  #   '^mb_' \
+  #   '^mc_' \
+  #   '^idle_' \
+  # ; do
+  #   jq -r '.
+  #     | .nodes
+  #     | to_entries
+  #     | map(select(.value.role | test("'"$role_regex"'")))
+  #     | map(.key)
+  #     | sort
+  #     | [.[0:-1], .[1:]]
+  #     | transpose
+  #     | map("\"" + .[0] + "\":s -- \"" + .[1] + "\":n "
+  #           + "[style = invisible];")
+  #     | .[]
+  #   ' "$config_json"
+  # done
+  #
+  # jq -r '(.nodes | with_entries(select(.value.role =="mc_server" or .value.role == "mc_leader")) | keys[]) as $x | (.nodes | with_entries(select(.value.role == "idle_server")) | keys[]) as $y | "\"\($x)\":e -- \"\($y)\":w [style=invisible];"' "$config_json"
+  #
+  # jq -r '.
+  #   | .client_mailbox_map
+  #   | keys[] as $k
+  #   | "\"\($k)\":e -- \"\(.[$k])\":w [style=dashed"
+  #     + ",taillabel = <"
+  #       + "<TABLE"
+  #         + " BORDER=\"1\""
+  #         + " CELLBORDER=\"0\""
+  #         + " CELLPADDING=\"0\""
+  #         + " BGCOLOR=\"lightyellow\""
+  #       + "><TR><TD>"
+  #       + (.[$k] | if test("[0-9]+$") then
+  #                    match("([0-9]+)$") | .captures[0].string
+  #                  else
+  #                    .
+  #                  end)
+  #       + "</TD></TR></TABLE>>"
+  #     + "];"
+  # ' "$config_json"
+  #
+  # jq -r '(.nodes | with_entries(select(.value.role =="mc_server" or .value.role == "mc_leader")) | keys[]) as $x | (.nodes | with_entries(select(.value.role =="mb_server")) | keys[]) as $y | "\"\($y)\":e -- \"\($x)\":w [style=dashed];"' "$config_json"
+  # jq -r '.nodes | with_entries(select(.value.role =="mc_server" or .value.role == "mc_leader")) | keys[] as $j | keys[] as $k | select( $j != $k) | "\"\($j)\":e -- \"\($k)\":e;"' "$config_json"
+  #
+  # printf '{
+  #   rank=same;
+  #   legend_dashed_spacer [style = invisible];
+  #   legend_solid_spacer [style = invisible];
+  #   legend_dashed_spacer -- clients [style = invisible];
+  # '
+  # jq -r '
+  #   .nodes
+  #   | map(select(.role == "client"))
+  #   | length
+  #   | "clients [shape = plaintext, label = \"" + (. | tostring) + " clients\"];"
+  # ' "$config_json"
+  #
+  # jq -r '.
+  #   | .client_mailbox_map
+  #   | keys[] as $k
+  #   | "\"\($k)\" [fillcolor=green,style=filled];"
+  # ' "$config_json"
+  #
+  # printf "};\n"
+  #
+  # printf '{
+  #   rank=same;
+  # '
+  # jq -r '
+  #   .nodes
+  #   | map(select(.role == "mb_server"))
+  #   | length
+  #   | "mb_servers [shape = plaintext, label = \"" + (. | tostring) + " MB servers\"];"
+  # ' "$config_json"
+  # jq -r '.nodes | with_entries(select(.value.role =="mb_server")) | keys[] as $j | "\"\($j)\" [shape=house,fillcolor=lightyellow,style=filled];"' "$config_json"
+  # printf "};\n"
+  #
+  # printf '{
+  #   rank=same;
+  # '
+  # jq -r '
+  #   .nodes
+  #   | map(select(.role == "mc_leader" or .role == "mc_server"))
+  #   | length
+  #   | "mc_servers [shape = plaintext, label = \"" + (. | tostring) + " MC servers\"];"
+  # ' "$config_json"
+  # jq -r '.nodes | with_entries(select(.value.role =="mc_server")) | keys[] as $j | "\"\($j)\" [shape=polygon,sides=4,fillcolor=lightblue,style=filled];"' "$config_json"
+  # jq -r '.nodes | with_entries(select(.value.role =="mc_leader")) | keys[] as $j | "\"\($j)\" [shape=polygon,sides=4,peripheries=3,fillcolor=lightblue,style=filled];"' "$config_json"
+  # printf "};\n"
+  #
+  # printf '{
+  #   rank=same;
+  # '
+  # jq -r '
+  #   .nodes
+  #   | map(select(.role == "idle_server"))
+  #   | length
+  #   | "idle_servers [shape = plaintext, label = \"" + (. | tostring) + " idle servers\"];"
+  # ' "$config_json"
+  # jq -r '.nodes | with_entries(select(.value.role =="idle_server")) | keys[] as $j | "\"\($j)\" [shape=polygon,sides=4,fillcolor=lightgray,style=filled];"' "$config_json"
+  # printf "};\n"
+  #
+  # printf '%s\n' '
+  #   legend_dashed_spacer -- legend_dashed_a [style = invisible];
+  #   legend_solid_spacer -- legend_solid_a [style = invisible];
+  #   subgraph cluster_legend {
+  #     label = "Channels";
+  #     {
+  #       rank = same;
+  #       legend_dashed_a [
+  #         label = "",
+  #         style = invisible,
+  #         width = 0.2
+  #       ];
+  #       legend_solid_a [
+  #         label = "",
+  #         style = invisible,
+  #         width = 0.2
+  #       ];
+  #     }
+  #     {
+  #       rank = same;
+  # '
+  # jq -s -r '.
+  #   | .[0] as $config
+  #   | .[1] as $result
+  #   | ($config
+  #      | .nodes
+  #      | with_entries(select(.value.role | test("client")))
+  #      | keys
+  #     ) as $clients
+  #   | ($config
+  #      | .nodes
+  #      | with_entries(select(.value.role | test("^mb_")))
+  #      | keys
+  #     ) as $mb_servers
+  #   | ($config
+  #      | .nodes
+  #      | with_entries(select(.value.role | test("^mc_")))
+  #      | keys
+  #     ) as $mc_servers
+  #   | ($result
+  #      | .links
+  #      | map(select(
+  #          ([.sender] | inside($clients + $mb_servers))
+  #          or (.recipients
+  #              | map([.] | inside($clients + $mb_servers))
+  #              | contains([true]))
+  #        ))
+  #      | map(.channels)
+  #      | flatten
+  #      | unique
+  #      | join("\\n")
+  #      | "legend_dashed_b [shape = none, label = \"" + . + "\"];"
+  #     ) as $legend_dashed_b
+  #   | ($result
+  #      | .links
+  #      | map(select(
+  #          ([.sender] | inside($mc_servers))
+  #          and
+  #          (.recipients
+  #           | map([.] | inside($mc_servers))
+  #           | contains([true]))
+  #        ))
+  #      | map(.channels)
+  #      | flatten
+  #      | unique
+  #      | join("\\n")
+  #      | "legend_solid_b [shape = none, label = \"" + . + "\"];"
+  #     ) as $legend_solid_b
+  #   | [$legend_dashed_b, $legend_solid_b][]
+  # ' "$config_json" "$result_json"
+  # printf '%s\n' '
+  #     }
+  #     legend_dashed_a -- legend_dashed_b [style = dashed];
+  #     legend_solid_a -- legend_solid_b;
+  #   }
+  # '
+  #
+  # printf "}"
+  #
+  # ) | dot -Tdot | gvpr -c '
+  #   // This script converts labels into nodes, which, when combined with
+  #   // outputorder=edgesfirst, prevents edges from being drawn on top of
+  #   // labels.
+  #   BEGIN {
+  #     int i = 0;
+  #   }
+  #   E {
+  #     if (taillabel) {
+  #       node_t n = node($G, "label_" + i++);
+  #       n.pos = tail_lp;
+  #       n.label = taillabel;
+  #       n.shape = "none";
+  #       tail_lp = "";
+  #       taillabel = "";
+  #     }
+  #   }
+  # ' | neato -n2 -Tpng | convert \
+  #   png:- \
+  #   -flatten \
+  #   -trim \
+  #   -bordercolor white \
+  #   -border 3%x1% \
+  #   png:- \
+  # ;
+  #
+
+  #---------------------------------------------------------------------

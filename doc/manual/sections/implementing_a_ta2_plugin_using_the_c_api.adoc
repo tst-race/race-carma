@@ -1,0 +1,70 @@
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+//----------------------------------------------------------------------
+ifdef::define_attributes[]
+ifndef::SECTIONS_IMPLEMENTING_A_TA2_PLUGIN_USING_THE_C_API_ADOC[]
+:SECTIONS_IMPLEMENTING_A_TA2_PLUGIN_USING_THE_C_API_ADOC:
+//----------------------------------------------------------------------
+
+:implementing_a_ta2_plugin_using_the_c_api_name0: Implementing a TA2 plugin using the C API
+
+:implementing_a_ta2_plugin_using_the_c_api_id: implementing-a-ta2-plugin-using-the-c-api
+:implementing_a_ta2_plugin_using_the_c_api_url: sections/implementing_a_ta2_plugin_using_the_c_api.adoc#{implementing_a_ta2_plugin_using_the_c_api_id}
+
+:implementing_a_ta2_plugin_using_the_c_api: xref:{implementing_a_ta2_plugin_using_the_c_api_url}[sst_abs_file]
+
+// TODO: Move these somewhere?
+:kestrel_ta2_sdk: kestrel_ta2_sdk
+:kestrel_ta2_sdk_get_entropy_chop1: get_entropy
+:kestrel_PluginResponse: kestrel_PluginResponse
+:kestrel_RaceHandle: kestrel_RaceHandle
+:kestrel_LinkType: kestrel_LinkType
+:kestrel_char: kestrel_char
+:kestrel_bool: kestrel_bool
+:createPluginTa2: createPluginTa2
+:destroyPluginTa2: destroyPluginTa2
+:kestrel_ta2_plugin_shutdown_chop1: shutdown
+
+//----------------------------------------------------------------------
+endif::[]
+endif::[]
+ifndef::define_attributes[]
+//----------------------------------------------------------------------
+
+[#{implementing_a_ta2_plugin_using_the_c_api_id}]
+= {implementing_a_ta2_plugin_using_the_c_api_name0}
+
+To implement a TA2 plugin using the Kestrel C API, you must implement
+the `{create_plugin_ta2}` and `{destroy_plugin_ta2}` functions.
+
+Kestrel will always call
+`plugin++->++{kestrel_ta2_plugin_shutdown_chop1}` if you indicated
+success from `{create_plugin_ta2}`, even if the plugin is not
+initialized.
+
+:leveloffset: +1
+
+include::create_plugin_ta2.adoc[]
+include::destroy_plugin_ta2.adoc[]
+include::kestrel_ta2_plugin.adoc[]
+
+:leveloffset: -1
+
+//----------------------------------------------------------------------
+endif::[]

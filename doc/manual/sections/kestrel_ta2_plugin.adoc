@@ -1,0 +1,120 @@
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+//----------------------------------------------------------------------
+ifdef::define_attributes[]
+ifndef::SECTIONS_KESTREL_TA2_PLUGIN_ADOC[]
+:SECTIONS_KESTREL_TA2_PLUGIN_ADOC:
+//----------------------------------------------------------------------
+
+:kestrel_ta2_plugin_name0: kestrel_ta2_plugin
+
+:kestrel_ta2_plugin_id: kestrel-ta2-plugin
+:kestrel_ta2_plugin_url: sections/kestrel_ta2_plugin.adoc#{kestrel_ta2_plugin_id}
+
+:kestrel_ta2_plugin_chop0: xref:{kestrel_ta2_plugin_url}[{kestrel_ta2_plugin_name0}]
+
+:kestrel_ta2_plugin: {kestrel_ta2_plugin_chop0}
+
+:pfjbmct4:
+
+//----------------------------------------------------------------------
+endif::[]
+endif::[]
+ifndef::define_attributes[]
+//----------------------------------------------------------------------
+
+[#{kestrel_ta2_plugin_id}]
+= The `{kestrel_ta2_plugin_name0}` structure
+
+:pfjbmct4: {empty} {empty} {empty}
+
+[source,subs="{sst_subs_source}"]
+----
+typedef struct {kestrel_ta2_plugin} {kestrel_ta2_plugin};
+
+struct {kestrel_ta2_plugin} {
+
+include::kestrel_ta2_plugin/decl/plugin.adoc[]
+
+include::kestrel_ta2_plugin/decl/name.adoc[]
+
+include::kestrel_ta2_plugin/decl/activateChannel.adoc[]
+
+include::kestrel_ta2_plugin/decl/closeConnection.adoc[]
+
+include::kestrel_ta2_plugin/decl/createLink.adoc[]
+
+include::kestrel_ta2_plugin/decl/deactivateChannel.adoc[]
+
+include::kestrel_ta2_plugin/decl/destroyLink.adoc[]
+
+include::kestrel_ta2_plugin/decl/flushChannel.adoc[]
+
+include::kestrel_ta2_plugin/decl/init.adoc[]
+
+include::kestrel_ta2_plugin/decl/loadLinkAddress.adoc[]
+
+include::kestrel_ta2_plugin/decl/onUserAcknowledgementReceived.adoc[]
+
+include::kestrel_ta2_plugin/decl/onUserInputReceived.adoc[]
+
+include::kestrel_ta2_plugin/decl/openConnection.adoc[]
+
+include::kestrel_ta2_plugin/decl/sendPackage.adoc[]
+
+include::kestrel_ta2_plugin/decl/shutdown.adoc[]
+
+};
+----
+
+:pfjbmct4:
+
+The `{kestrel_ta2_plugin}` structure represents an instance of a TA2
+plugin.
+The structure contains an opaque pointer to the plugin instance, a
+string pointer, and a set of pointers to the plugin functions.
+Kestrel stores one of these structures for each TA2 plugin instance it's
+managing and uses the function pointers to make calls to that plugin
+instance, always passing the opaque pointer as the first argument.
+For example, Kestrel will call
+`plugin++->++{kestrel_ta2_plugin_init_chop1}(plugin++->++plugin)` to
+initialize a plugin instance.
+
+:leveloffset: +1
+
+include::kestrel_ta2_plugin/plugin.adoc[]
+include::kestrel_ta2_plugin/name.adoc[]
+include::kestrel_ta2_plugin/activateChannel.adoc[]
+include::kestrel_ta2_plugin/closeConnection.adoc[]
+include::kestrel_ta2_plugin/createLink.adoc[]
+include::kestrel_ta2_plugin/deactivateChannel.adoc[]
+include::kestrel_ta2_plugin/destroyLink.adoc[]
+include::kestrel_ta2_plugin/flushChannel.adoc[]
+include::kestrel_ta2_plugin/init.adoc[]
+include::kestrel_ta2_plugin/loadLinkAddress.adoc[]
+include::kestrel_ta2_plugin/onUserAcknowledgementReceived.adoc[]
+include::kestrel_ta2_plugin/onUserInputReceived.adoc[]
+include::kestrel_ta2_plugin/openConnection.adoc[]
+include::kestrel_ta2_plugin/sendPackage.adoc[]
+include::kestrel_ta2_plugin/shutdown.adoc[]
+
+:leveloffset: -1
+
+//----------------------------------------------------------------------
+endif::[]

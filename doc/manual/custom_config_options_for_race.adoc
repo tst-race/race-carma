@@ -1,0 +1,126 @@
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+[#custom_config_options_for_race]
+= Custom config options
+
+These are the custom options that can be specified for CARMA using the
+`--ta1-custom-args` option of the `rib deployment config generate`
+command:
+
+:leveloffset: +1
+
+include::cro_dynamic_only.adoc[]
+
+:leveloffset: -1
+
+//----------------------------------------------------------------------
+
+[#cro_allow_multicast]
+== The `--allow-multicast` option
+
+`--[no-]allow-multicast`::
+When enabled, multicast links may be used.
+When disabled, multicast links will not be used.
++
+Default: disabled.
+
+//----------------------------------------------------------------------
+
+[#cro_leader_relay_only]
+== The `--leader-relay-only` option
+
+`--[no-]leader-relay-only`::
+When enabled, only the leader of a management committee will send a
+message to the mailbox server of a recipient client.
+When disabled, every member of a management committee will send a
+message to the mailbox server of a recipient client.
++
+Default: enabled.
+
+//----------------------------------------------------------------------
+
+[#cro_mix_size]
+== The `--mix-size` option
+
+`--mix-size=<n>`::
+Specifies the number of messages a management committee must receive
+before performing a mix, which causes the messages to be processed by
+the committee and sent to the recipient clients through their mailbox
+servers.
++
+`<n>` must be at least 4 and must be a square.
++
+Default: 4.
+
+//----------------------------------------------------------------------
+
+[#cro_inter_server_direct_only]
+== The `--inter-server-direct-only` option
+
+`--[no-]inter-server-direct-only`::
+When enabled, all non-client nodes will only use direct links to send
+messages to each other.
+When disabled, all non-client nodes will use both direct and indirect
+links to send messages to each other.
++
+Default: enabled.
+
+//----------------------------------------------------------------------
+
+[#cro_send_retry_count]
+== The `--send-retry-count` option
+
+`--send-retry-count=<n>`::
+Specifies the number of times a message will attempt to be resent.
++
+`<n>` must be nonnegative.
++
+Default: 0.
+
+//----------------------------------------------------------------------
+
+[#cro_send_retry_window]
+== The `--send-retry-window` option
+
+`--send-retry-window=<n>`::
+Specifies the maximum number of seconds to wait between message resend
+attempts.
+The actual number of seconds is probabilistically selected for each
+resend attempt.
++
+`<n>` must be nonnegative.
++
+Default: 180.
+
+//----------------------------------------------------------------------
+
+[#cro_send_timeout]
+== The `--send-timeout` option
+
+`--send-timeout=<n>`::
+Specifies the `sendTimeout` value to use when calling the
+`openConnection` function of the RACE SDK.
++
+`<n>` must be nonnegative.
++
+Default: 600.
+
+//----------------------------------------------------------------------
+
+//

@@ -1,0 +1,85 @@
+#
+# Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+f() {
+
+  declare    d
+  declare    script
+  declare    x
+
+  if ((SST_DEBUG)); then
+    sst_expect_source_path "$BASH_SOURCE"
+  fi
+
+  d=$(sst_get_prefix $BASH_SOURCE)
+  readonly d
+
+  script=\''
+    BEGIN {
+      printf "%s\n", "//";
+      printf "%s\n", "// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.";
+      printf "%s\n", "//";
+      printf "%s\n", "// Licensed under the Apache License, Version 2.0 (the "License");";
+      printf "%s\n", "// you may not use this file except in compliance with the License.";
+      printf "%s\n", "// You may obtain a copy of the License at";
+      printf "%s\n", "//";
+      printf "%s\n", "//     http://www.apache.org/licenses/LICENSE-2.0";
+      printf "%s\n", "//";
+      printf "%s\n", "// Unless required by applicable law or agreed to in writing,";
+      printf "%s\n", "// software distributed under the License is distributed on an "AS";
+      printf "%s\n", "// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either";
+      printf "%s\n", "// express or implied. See the License for the specific language";
+      printf "%s\n", "// governing permissions and limitations under the License.";
+      printf "%s\n", "//";
+      printf "%s\n", "// SPDX-License-Identifier: Apache-2.0";
+      printf "%s\n", "//";
+      printf "%s\n", "";
+      printf "%s\n", ""h"ifndef KESTREL_RABBITMQ_MANAGEMENT_KESTREL_RABBITMQ_MANAGEMENT_CHANNEL_PROPERTIES_HPP";
+      printf "%s\n", ""h"define KESTREL_RABBITMQ_MANAGEMENT_KESTREL_RABBITMQ_MANAGEMENT_CHANNEL_PROPERTIES_HPP";
+      printf "%s\n", "";
+      printf "%s",   ""h"define KESTREL_RABBITMQ_MANAGEMENT_CHANNEL_PROPERTIES \"";
+    }
+    {
+      gsub(/\\/, "\\\\");
+      gsub(/"/, "\\\"");
+      $$0 = $$0 "\\n";
+      printf "%s", $$0;
+    }
+    END {
+      printf "%s\n", "\"";
+      printf "%s\n", "";
+      printf "%s\n", ""h"endif // "h"define KESTREL_RABBITMQ_MANAGEMENT_KESTREL_RABBITMQ_MANAGEMENT_CHANNEL_PROPERTIES_HPP";
+    }
+  '\'
+  script=${script//$'\n'/}
+  readonly script
+
+  x=${d/#'src/core'/'src/core/share'}
+
+  sst_ihs <<<'
+
+    KESTREL_RABBITMQ_MANAGEMENT_CHANNEL_PROPERTIES_SCRIPT = '"$script"'
+
+    '"${BASH_SOURCE%.ag}"': '"$x"'channel_properties.json
+    	$(AWK) -v h="#" $(KESTREL_RABBITMQ_MANAGEMENT_CHANNEL_PROPERTIES_SCRIPT) $? >$@
+
+    GATBPS_MOSTLYCLEANFILES += '"${BASH_SOURCE%.ag}"'/clean
+
+  ' | sst_am_append
+
+}; f

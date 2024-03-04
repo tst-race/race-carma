@@ -1,0 +1,55 @@
+##
+## Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing,
+## software distributed under the License is distributed on an "AS
+## IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+## express or implied. See the License for the specific language
+## governing permissions and limitations under the License.
+##
+## SPDX-License-Identifier: Apache-2.0
+##
+
+src/core/kestrel/carma/rangegen/rigid_default.cpp: src/core/kestrel/carma/rangegen/cpp.awk src/core/kestrel/carma/rangegen/rigid_default.csv
+	$(AM_V_at)$(GATBPS_RECIPE_MARKER_TOP)
+	$(AM_V_GEN)$(GATBPS_V_NOP)
+	$(AM_V_at)rm -f -r $@$(TSUF)* $@
+	$(AM_V_at)$(MKDIR_P) $(@D)
+	$(AM_V_at){ :; \
+	  \
+	  cpp_awk=src/core/kestrel/carma/rangegen/cpp.awk; \
+	  $(GATBPS_VPATH_SEARCH_TOP) \
+	    "$${cpp_awk?}" \
+	  $(GATBPS_VPATH_SEARCH_BOT); \
+	  cpp_awk=$(GATBPS_VPATH_SEARCH_RESULT)/$${cpp_awk?}; \
+	  readonly cpp_awk; \
+	  \
+	  csv=src/core/kestrel/carma/rangegen/rigid_default.csv; \
+	  $(GATBPS_VPATH_SEARCH_TOP) \
+	    "$${csv?}" \
+	  $(GATBPS_VPATH_SEARCH_BOT); \
+	  csv=$(GATBPS_VPATH_SEARCH_RESULT)/$${csv?}; \
+	  readonly csv; \
+	  \
+	  $(AWK) \
+	    -f "$${cpp_awk?}" \
+	    -v array_name=rigid_default \
+	    -v copyright_notice='//\n// Copyright (C) Stealth Software Technologies, Inc.\n//\n// For the complete copyright information, please see the\n// associated README file.\n//' \
+	    -v hpp_guard=KESTREL_CARMA_RANGEGEN_RIGID_DEFAULT_HPP \
+	    <"$${csv?}" \
+	    >$@$(TSUF) \
+	  ; \
+	  \
+	}
+	$(AM_V_at)mv -f $@$(TSUF) $@
+	$(AM_V_at)rm -f -r $@$(TSUF)*
+	$(AM_V_at)$(GATBPS_RECIPE_MARKER_BOT)
+
+GATBPS_MOSTLYCLEANFILES += src/core/kestrel/carma/rangegen/rigid_default.cpp/clean
+

@@ -1,0 +1,26 @@
+ifeval::[0 > 1]
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+endif::[]
+Although the name `{vjeaduep}` is used for this function throughout this
+manual, you should give this function a unique name of your own choosing
+to help prevent name collisions with other code.
+The usual approach is to use a unique prefix on this name (and any other
+names your plugin uses).
+For example, if your plugin were named Foo, you could use `foo_` as a
+unique prefix and name this function `foo_{vjeaduep_name0}`.

@@ -1,0 +1,196 @@
+#
+# Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+f() {
+
+  declare    d
+  declare    dst
+
+  sst_expect_source_path "$BASH_SOURCE"
+  d=$(sst_get_prefix $BASH_SOURCE)
+  readonly d
+
+  dst=${d}'kestrel-$(PACKAGE_VERSION)-web'
+  readonly dst
+
+  #---------------------------------------------------------------------
+
+  sst_ac_append <<EOF
+
+GATBPS_CP(
+  [${d}curl.tar.gz],
+  [build-aux/downloads/curl.tar.gz])
+
+GATBPS_CP(
+  [${d}gmp.tar.any],
+  [build-aux/downloads/gmp.tar.gz])
+
+GATBPS_CP(
+  [${d}libsodium.gitbundle],
+  [build-aux/gitbundles/libsodium.gitbundle])
+
+GATBPS_CP(
+  [${d}ntl.tar.gz],
+  [build-aux/downloads/ntl.tar.gz])
+
+GATBPS_CP(
+  [${d}rabbitmq.tar.gz],
+  [build-aux/downloads/rabbitmq-c.tar.gz])
+
+GATBPS_CP(
+  [${d}sqlite.tar.any],
+  [build-aux/downloads/sqlite-autoconf.tar.gz])
+
+GATBPS_CP(
+  [${d}sst.tar.gz],
+  [build-aux/downloads/sst.tar.gz])
+
+GATBPS_CP(
+  [${d}openssl.tar.gz],
+  [build-aux/downloads/openssl.tar.gz])
+
+GATBPS_CP(
+  [${d}kestrel.tar.gz],
+  [\$(distdir).tar.gz])
+
+GATBPS_TAR(
+  [$dst.tar],
+  [$dst])
+
+GATBPS_XZ(
+  [$dst.tar.xz],
+  [$dst.tar])
+
+EOF
+
+  #---------------------------------------------------------------------
+
+  sst_am_append <<EOF
+
+$dst.base: \\
+  ${d}base.dockerfile \\
+  ${d}curl.tar.gz \\
+  ${d}gmp.tar.any \\
+  ${d}libsodium.gitbundle \\
+  ${d}ntl.tar.gz \\
+  ${d}openssl.tar.gz \\
+  ${d}rabbitmq.tar.gz \\
+  ${d}sqlite.tar.any \\
+  ${d}sst.tar.gz \\
+\$(empty)
+	\$(AM_V_GEN)\$(GATBPS_RECIPE_MARKER_TOP)
+	\$(AM_V_at)rm -f -r \$@\$(TSUF)* \$@
+	\$(AM_V_at)\$(MKDIR_P) \$(@D)
+	\$(AM_V_at)\$(DOCKER) build \\
+	   --build-arg DOCKERFILE_THREADS=\$(DOCKERFILE_THREADS) \\
+	   --file ${d}base.dockerfile \\
+	   --iidfile \$@\$(TSUF) \\
+	   ${d}. \\
+	;
+	\$(AM_V_at)mv -f \$@\$(TSUF) \$@
+	\$(AM_V_at)-rm -f -r \$@\$(TSUF)*
+	\$(AM_V_at)\$(GATBPS_RECIPE_MARKER_BOT)
+
+$dst: \\
+  $dst.base \\
+  ${d}kestrel.tar.gz \\
+  ${d}loop.dockerfile \\
+\$(empty)
+	\$(AM_V_GEN)\$(GATBPS_RECIPE_MARKER_TOP)
+	\$(AM_V_at)rm -f -r \$@\$(TSUF)* \$@
+	\$(AM_V_at)\$(MKDIR_P) \$(@D)
+	\$(AM_V_at){ \\
+	\\
+	  base_iid_file=$dst.base; \\
+	  readonly base_iid_file; \\
+	\\
+	  base_iid=\`cat \$\${base_iid_file?}\` || exit \$\$?; \\
+	  readonly base_iid; \\
+	\\
+	  loop_iid_file=\$@\$(TSUF).loop_iid; \\
+	  readonly loop_iid_file; \\
+	\\
+	  base_name=tmp.\$\$\$\$; \\
+	  readonly base_name; \\
+	\\
+	  \$(DOCKER) tag \\
+	    "\$\${base_iid?}" \
+	    "\$\${base_name}" \
+	  || exit \$\$?; \\
+	\\
+	  \$(DOCKER) build \\
+	     --build-arg BASE_NAME="\$\${base_name?}" \\
+	     --build-arg DOCKERFILE_THREADS=\$(DOCKERFILE_THREADS) \\
+	     --file ${d}loop.dockerfile \\
+	     --iidfile \$\${loop_iid_file?} \\
+	     ${d}. \\
+	  || exit \$\$?; \\
+	\\
+	  loop_iid=\`cat \$\${loop_iid_file?}\` || exit \$\$?; \\
+	  readonly loop_iid; \\
+	\\
+	  loop_cid_file=\$@\$(TSUF).loop_cid; \\
+	  readonly loop_cid_file; \\
+	\\
+	  \$(DOCKER) create \\
+	    --cidfile \$\${loop_cid_file?} \\
+	    \$\${loop_iid?} \\
+	  || exit \$\$?; \\
+	  loop_cid=\`cat \$\${loop_cid_file?}\` || exit \$\$?; \\
+	  readonly loop_cid; \\
+	\\
+	  unset s; \\
+	  \$(DOCKER) cp \\
+	    \$\${loop_cid?}:/x/out \\
+	    \$@\$(TSUF) \\
+	  || s="exit \$\$?"; \\
+	\\
+	  \$(DOCKER) rm \\
+	    --force \\
+	    --volumes \\
+	    \$\${loop_cid?} \\
+	    >/dev/null \\
+	    2>/dev/null \\
+	  ; \\
+	\\
+	  \$\${s-:}; \\
+	\\
+	  mv -f \\
+	    "\$\${loop_iid_file?}" \\
+	    "\$\${base_iid_file?}" \\
+	  || exit \$\$?; \\
+	\\
+	}
+	\$(AM_V_at)touch \$@\$(TSUF)
+	\$(AM_V_at)mv -f \$@\$(TSUF) \$@
+	\$(AM_V_at)-rm -f -r \$@\$(TSUF)*
+	\$(AM_V_at)\$(GATBPS_RECIPE_MARKER_BOT)
+
+GATBPS_MOSTLYCLEANFILES += $dst/clean
+
+src/web: $dst.tar.xz
+
+EOF
+
+  #---------------------------------------------------------------------
+
+  sst_am_distribute_if_not_dir ${d}**
+
+  #---------------------------------------------------------------------
+
+}; f

@@ -1,0 +1,22 @@
+{
+
+  "handler": "sst_ajh_download",
+
+  "hashes": {
+    "md5": "3390cf8cc96bbec5a9123f2fb22480db",
+    "sha1": "a81a30b55ce5cc4346615224442a9125bc6e62a2",
+    "sha224": "b5bfc820221777fc1c16cdfbe0b1a3133959ead0f1933f90a4332846",
+    "sha256": "e56fd59d76810932a0555aa15a14b61c16bed66110d3c75cc2ac49ddaa9ab24c",
+    "sha384": "d8bb479d2912e29a6715c98af4c25e471706aadeff6bcd5642cc2a2d2cc268d34f778d2be8ba3e10d41ae812d6a075b0",
+    "sha512": "44672c7568b007b4dffc5544374b9169004dfbe7ff79712302f15aa95d46229e3a057266a0421aadf95ab8a4af13ce4090d8ea39615d50c5064b4703a53fe3b0"
+  },
+
+  "urls": [
+    "https://gmplib.org/download/gmp/gmp-6.3.0.tar.gz",
+    "https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.gz",
+    "https://mirrors.kernel.org/gnu/gmp/gmp-6.3.0.tar.gz",
+    "https://www.mirrorservice.org/sites/ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.gz",
+    "https://mirrors.ocf.berkeley.edu/gnu/gmp/gmp-6.3.0.tar.gz"
+  ]
+
+}

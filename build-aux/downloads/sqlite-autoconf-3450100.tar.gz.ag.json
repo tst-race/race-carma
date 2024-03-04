@@ -1,0 +1,19 @@
+{
+
+  "handler": "sst_ajh_download",
+
+  "hashes": {
+    "md5": "743c99f996add46273694df83c9140d4",
+    "sha1": "650305e234add12fc1e6bef0b365d86a087b3d38",
+    "sha224": "3fa44afc874f01eb39ec2c82a38622fa46bfcb3f34a68f3ff73cf7b2",
+    "sha256": "cd9c27841b7a5932c9897651e20b86c701dd740556989b01ca596fcfa3d49a0a",
+    "sha384": "8b8bfb825edcb1fa746c9ca80744dee8282e763e84ca468b986bf4893c6fd34ef860c7373a30059126a3596db5705790",
+    "sha512": "c6bd4eaa67cada28528d1ac31aec1662c0a11048247a1bb148c1842fb0252934e2096843b56fea94bfb96c4eaaa598ec70ac31f2a5e910388f24f152b9fc4211"
+  },
+
+  "urls": [
+    "https://www.sqlite.org/2024/sqlite-autoconf-3450100.tar.gz",
+    "https://ftp.osuosl.org/pub/blfs/conglomeration/sqlite/sqlite-autoconf-3450100.tar.gz",
+  ""]
+
+}

@@ -1,0 +1,51 @@
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+:zxgy_yyyy: 2021
+:zxgy_mm: 05
+:zxgy_dd: 07
+:zxgy_race_version: 1.1.5
+:zxgy_artifactory_revision: 160
+
+include::release_notes_for_race_header_1.adoc[]
+
+* {blank}
+Use any number of clients, at least 10 servers, and at least one
+indirect channel.
+The minimum number of servers is 6, but using fewer servers increases
+the probability that all server selection trials will fail during config
+generation.
+
+* {blank}
+OpenTracing is now (re)integrated into our updated MPC protocol.
+
+* {blank}
+Links are now probabilistically prioritized by various metrics.
+
+* {blank}
+Sends for which success has not been reported via the
+`onPackageStatusChanged` API will now be probabilistically attempted to
+be resent up to 5 times over 5 minutes, sometimes trying other links.
+
+* {blank}
+An issue where messages over a certain size were immediately failing to
+send has been fixed.
+Messages up to 140 bytes in size are now supported again.
+Please note that persona names are currently limited to 32 bytes.
+
+//

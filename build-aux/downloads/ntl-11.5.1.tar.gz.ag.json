@@ -1,0 +1,18 @@
+{
+
+  "handler": "sst_ajh_download",
+
+  "hashes": {
+    "md5": "abd887865df30c02609210a86cb953b1",
+    "sha1": "a55050ca07fb42c6f9e9a479b6f80be6f1f77886",
+    "sha224": "b58c4bb60b7be7be89729422adab143e0248ce011f0afb41df00391c",
+    "sha256": "210d06c31306cbc6eaf6814453c56c776d9d8e8df36d74eb306f6a523d1c6a8a",
+    "sha384": "6d1d945b596ef77bf27d503f6b23a4749ce37d6f08fa0cfc9308b8f4a13cd6f762d835d6327fe581aa32125419b8b6c5",
+    "sha512": "cf1f642b8a0f9cdc6dda888e07183817dc67ff494e56a852053aeb15b3d2a0e61fbc05824779c5d1f20b8115fba6f97266acf7e0b0b527c25df5989c86d5928f"
+  },
+
+  "urls": [
+    "https://libntl.org/ntl-11.5.1.tar.gz"
+  ]
+
+}

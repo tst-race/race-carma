@@ -1,0 +1,217 @@
+#
+# Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+f() {
+
+  declare    child
+  declare    d
+  declare    d_slug
+  declare    leaf
+  declare    x
+  declare    x_slug
+  declare    y
+  declare    y_slug
+  declare    z
+
+  sst_expect_source_path "$BASH_SOURCE"
+  d=$(sst_get_prefix $BASH_SOURCE)
+  readonly d
+
+  d_slug=$(sst_underscore_slug $d)
+  readonly d_slug
+
+  sst_ag_include ${d}kestrel/carma/rangegen/build.phony.ag
+
+  #---------------------------------------------------------------------
+
+  x=${d_slug}carma_sources
+  y=${d_slug}libcarma_la
+  for leaf in ${d}kestrel/**; do
+    if [[ -f "$leaf" ]]; then
+      if ((SST_DEBUG)); then
+        sst_expect_source_path "$leaf"
+      fi
+      sst_ag_process_leaf $x $leaf child
+    fi
+  done
+  sst_am_var_add nodist_${y}_SOURCES "\$(${x}_children)"
+  sst_am_var_add nodist_${y}_SOURCES "\$(${x}_children_nodist)"
+  sst_am_append <<<"\$(${y}_OBJECTS): \$(${x}_children_nodist)"
+
+  #---------------------------------------------------------------------
+
+  for x in \
+    carma \
+  ; do
+    y=${d}bin/$x
+    sst_ajh_build_tree_program_wrapper $y.ag.json
+    sst_ac_config_file $y.wrappee/$x
+    sst_am_var_add bin_SCRIPTS $y.wrappee/$x
+  done
+
+  for x in \
+    carma-draw \
+    carma-stack \
+    carma-test \
+    carma-trace \
+  ; do
+    y=${d}libexec/kestrel/$x
+    sst_ajh_build_tree_program_wrapper $y.ag.json
+    sst_am_var_add pkglibexec_SCRIPTS $y.wrappee/$x
+  done
+
+  #---------------------------------------------------------------------
+  # bin
+  #---------------------------------------------------------------------
+
+  for leaf in ${d}bin/**/*; do
+    if ((SST_DEBUG)); then
+      sst_expect_source_path "$leaf"
+    fi
+    if [[ -f $leaf ]]; then
+      # TODO: What to use instead of "my_bin"?
+      sst_ag_process_leaf my_bin $leaf child
+    fi
+  done
+
+  for x in ${d}bin/**/*.wrappee/*.{c,cpp}; do
+
+    sst_expect_source_path "$x"
+    x=${x%.*}
+    x_slug=$(sst_underscore_slug $x)
+
+    sst_ajh_build_tree_program_wrapper ${x%.wrappee/*}.ag.json
+
+    sst_am_install bin PROGRAMS - $x
+
+    # TODO: Technically we only need to depend on headers of some sort?
+    sst_ihs <<<"
+      \$(${x_slug}_OBJECTS): \$(${x_slug}_DEPENDENCIES)
+    " | sst_am_append
+
+    sst_am_var_add ${x_slug}_CPPFLAGS \
+      '$(AM_CPPFLAGS)' \
+    ;
+
+    sst_am_var_add ${x_slug}_CFLAGS \
+      '$(AM_CFLAGS)' \
+      '$(EXE_CFLAGS)' \
+    ;
+
+    sst_am_var_add ${x_slug}_CXXFLAGS \
+      '$(AM_CXXFLAGS)' \
+      '$(EXE_CXXFLAGS)' \
+    ;
+
+    sst_am_var_add ${x_slug}_LDADD \
+      src/core/libcarma.la \
+    ;
+
+    sst_am_var_add ${x_slug}_LDFLAGS \
+      '$(AM_LDFLAGS)' \
+      '$(EXE_LDFLAGS)' \
+    ;
+
+    for z in ${x%/*}/**/*.[ch]*; do
+      sst_am_var_add nodist_${x_slug}_SOURCES $z
+    done
+
+  done
+
+  #---------------------------------------------------------------------
+  # share
+  #---------------------------------------------------------------------
+
+  sst_am_install data DATA ${d}share ${d}share
+
+  #---------------------------------------------------------------------
+  # libexec
+  #---------------------------------------------------------------------
+
+  for leaf in ${d}libexec/**/*; do
+    if ((SST_DEBUG)); then
+      sst_expect_source_path "$leaf"
+    fi
+    if [[ -f $leaf ]]; then
+      # TODO: What to use instead of "my_libexec"?
+      sst_ag_process_leaf my_libexec $leaf child
+    fi
+  done
+
+  sst_am_install libexec SCRIPTS ${d}libexec ${d}libexec/**/*.sh
+
+  for x in ${d}libexec/**/*.wrappee/*.{c,cpp}; do
+
+    sst_expect_source_path "$x"
+    x=${x%.*}
+    x_slug=$(sst_underscore_slug $x)
+
+    y=${x#${d}libexec/}
+    y=${y%/*.wrappee/*}
+    y_slug=$(sst_underscore_slug $y)
+
+    sst_ajh_build_tree_program_wrapper ${x%.wrappee/*}.ag.json
+
+    sst_am_if WITH_MOCK_SDK
+
+    sst_am_install libexec/$y PROGRAMS - $x
+
+    # TODO: Technically we only need to depend on headers of some sort?
+    sst_ihs <<<"
+      \$(${x_slug}_OBJECTS): \$(${x_slug}_DEPENDENCIES)
+    " | sst_am_append
+
+    sst_am_var_add ${x_slug}_CPPFLAGS \
+      '$(AM_CPPFLAGS)' \
+    ;
+
+    sst_am_var_add ${x_slug}_CFLAGS \
+      '$(AM_CFLAGS)' \
+      '$(EXE_CFLAGS)' \
+    ;
+
+    sst_am_var_add ${x_slug}_CXXFLAGS \
+      '$(AM_CXXFLAGS)' \
+      '$(EXE_CXXFLAGS)' \
+    ;
+
+    sst_am_var_add ${x_slug}_LDADD \
+      src/mock/libcarmamock.la \
+    ;
+
+    sst_am_var_add ${x_slug}_LDFLAGS \
+      '$(AM_LDFLAGS)' \
+      '$(EXE_LDFLAGS)' \
+    ;
+
+    for z in ${x%/*}/**/*.[ch]*; do
+      sst_am_var_add nodist_${x_slug}_SOURCES $z
+    done
+
+    sst_am_endif WITH_MOCK_SDK
+
+  done
+
+  #---------------------------------------------------------------------
+
+  x=${d}libexec/kestrel/carma_test_rib_inner.bash
+  sst_am_var_add pkglibexec_SCRIPTS $x
+
+  #---------------------------------------------------------------------
+
+}; f

@@ -1,0 +1,447 @@
+#! /bin/sh -
+#
+# Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This script uses the SST Bash library to bootstrap from /bin/sh into
+# bash. See the Bash library > Bootstrapping section of the SST manual
+# for more information.
+#
+
+#-----------------------------------------------------------------------
+# Load the prelude
+#-----------------------------------------------------------------------
+
+case ${USE_BUILD_TREE-} in '')
+  set -e || exit $?
+  . '{@}pkgdatadir{@}/bash/sst.bash'
+;; *)
+  case $0 in /*) x=$0 ;; *) x=./$0 ;; esac
+  r='\(.*/\)'
+  x=`expr "$x" : "$r"`. || exit $?
+  set -e || exit $?
+  . "$x/../../../../../src/bash/sst.bash"
+esac
+
+#-----------------------------------------------------------------------
+
+f() {
+
+  local -r argv0=carma-trace
+  local cmd
+  local -r argvS="${argv0//?/ }"
+
+  unset IFS
+
+  parse_options=1
+  files=()
+  analyses=(do_nothing)
+
+  prev_analysis() {
+    local prev
+    prev=${analyses[${#analyses[@]} - 1]}
+    prev=${prev%% *}
+    echo $prev
+  }; readonly -f prev_analysis
+
+  set x "$@"
+  while (($# > 1)); do
+    shift
+
+    if ((parse_options)); then
+      case $1 in
+        --help | --help=*)
+          cat <<EOF
+Usage: $argv0 [<option>]... [<file>]...
+
+Filters down a set of race.log files to the CARMA tracing events and/or
+performs various analyses.
+
+The input is the concatenation of the specified files, or standard input
+if no files are specified. If the first character of the input is "{" or
+"[", no filtering down is performed. Otherwise, the input is filtered
+down to the lines matching /.*carma_tracing_event:/ with the matching
+part of each line deleted.
+
+Analyses
+
+--clrmsg
+      Filters down a sequence of events to only the incoming and
+      outgoing clrmsg events, grouping them into an array for each
+      clrmsg. Each array is ordered chronologically. The sequence
+      of arrays is ordered chronologically by first event.
+
+--encpkg
+      Filters down a sequence of events to only the incoming and
+      outgoing encpkg events, grouping them into an array for each
+      encpkg. Each array is ordered chronologically. The sequence
+      of arrays is ordered chronologically by first event.
+
+--deltas
+      For each array of events, translates each event in the array
+      into a bc calculation of the number of seconds between this
+      event and the first event in the array.
+EOF
+          exit 0
+        ;;
+
+        #-----------------------------------------------------------------
+        # --clrmsg
+        #-----------------------------------------------------------------
+
+        --clrmsg)
+          prev=$(prev_analysis)
+          if [[ $prev != do_nothing ]]; then
+            sst_barf "--clrmsg must be first"
+          fi
+          analyses+=(do_clrmsg)
+          continue
+        ;;
+
+        --clrmsg=*)
+          sst_barf "option forbids an argument: ${1%%=*}"
+        ;;
+
+        #-----------------------------------------------------------------
+        # --encpkg
+        #-----------------------------------------------------------------
+
+        --encpkg)
+          prev=$(prev_analysis)
+          if [[ $prev != do_nothing ]]; then
+            sst_barf "--encpkg must be first"
+          fi
+          analyses+=(do_encpkg)
+          continue
+        ;;
+
+        --encpkg=*)
+          sst_barf "option forbids an argument: ${1%%=*}"
+        ;;
+
+        #-----------------------------------------------------------------
+        # --deltas
+        #-----------------------------------------------------------------
+
+        --deltas)
+          prev=$(prev_analysis)
+          if [[ $prev != do_clrmsg && $prev != do_encpkg ]]; then
+            sst_barf "--deltas must follow --clrmsg or --encpkg"
+          fi
+          analyses+=(do_deltas)
+          continue
+        ;;
+
+        --deltas=*)
+          sst_barf "option forbids an argument: ${1%%=*}"
+        ;;
+
+        #-----------------------------------------------------------------
+        # --summary
+        #-----------------------------------------------------------------
+
+        --summary)
+          prev=$(prev_analysis)
+          if [[ $prev != do_clrmsg && $prev != do_encpkg ]]; then
+            sst_barf "--summary must follow --clrmsg or --encpkg"
+          fi
+          analyses+=("do_summary $prev")
+          continue
+        ;;
+
+        --summary=*)
+          sst_barf "option forbids an argument: ${1%%=*}"
+        ;;
+
+        #-----------------------------------------------------------------
+
+        --)
+          parse_options=
+          continue
+        ;;
+
+        --=*)
+          sst_barf "option forbids an argument: ${1%%=*}"
+        ;;
+
+        --*)
+          x=$(sst_smart_quote "${1%%=*}")
+          sst_barf "unknown option: $x"
+        ;;
+
+        -?*)
+          x=$(sst_smart_quote "${1:0:2}")
+          sst_barf "unknown option: $x"
+        ;;
+
+        #-----------------------------------------------------------------
+      esac
+    fi
+
+    if [[ "$1" != "" && "$1" != - && "$1" != [./]* ]]; then
+      files+=("./$1")
+    else
+      files+=("$1")
+    fi
+
+  done
+
+  if [[ ${#files[@]} == 0 ]]; then
+    files=(-)
+  fi
+
+  readonly parse_options
+  readonly files
+  readonly analyses
+
+  #-----------------------------------------------------------------------
+
+  readonly zero_pad='
+    def zero_pad:
+      (20 - length) * "0" + .
+    ;
+  '
+
+  #-----------------------------------------------------------------------
+
+  do_nothing() {
+    jq .
+  }; readonly -f do_nothing
+
+  #-----------------------------------------------------------------------
+
+  do_clrmsg() {
+    local -r f='
+      def f:
+        if .event == "incoming_clrmsg" then
+          .incoming_clrmsg.hash
+        elif .event == "reconstructed_clrmsg" then
+          .reconstructed_clrmsg.hash
+        else
+          null
+        end
+      ;
+    '
+    jq "$f select(f)" | jq -s '
+      '"$zero_pad"'
+      '"$f"'
+      .
+      | group_by(f)
+      | map(sort_by(.unix_time_ns | zero_pad))
+      | sort_by(.[0].unix_time_ns | zero_pad)
+      | .[]
+    '
+  }; readonly -f do_clrmsg
+
+  #-----------------------------------------------------------------------
+
+  do_encpkg() {
+    local -r f='
+      def f:
+        if .event == "incoming_encpkg" then
+          .incoming_encpkg.hash
+        elif .event == "outgoing_encpkg" then
+          .outgoing_encpkg.hash
+        else
+          null
+        end
+      ;
+    '
+    jq "$f select(f)" | jq -s '
+      '"$zero_pad"'
+      '"$f"'
+      .
+      | group_by(f)
+      | map(sort_by(.unix_time_ns | zero_pad))
+      | sort_by(.[0].unix_time_ns | zero_pad)
+      | .[]
+    '
+  }; readonly -f do_encpkg
+
+  #-----------------------------------------------------------------------
+
+  do_deltas() {
+    jq '
+      .
+      | map(.unix_time_ns)
+      | .[0] as $t0
+      | map("bc:(" + . + "-" + $t0 + ")/1000000000")
+    '
+  }; readonly -f do_deltas
+
+  #-----------------------------------------------------------------------
+
+  do_summary() {
+    case $1 in
+      do_clrmsg)
+        jq '
+          .
+          | map(select(.event == "incoming_clrmsg")) as $a
+          | map(select(.event == "reconstructed_clrmsg")) as $b
+          | {
+              "hash": (
+                $a[0].incoming_clrmsg.hash
+                // $b[0].reconstructed_clrmsg.hash
+              ),
+              "sender": (
+                $a[0].incoming_clrmsg.from
+                // $b[0].reconstructed_clrmsg.from
+              ),
+              "recver": (
+                $a[0].incoming_clrmsg.to
+                // $b[0].reconstructed_clrmsg.to
+              ),
+              "message": (
+                $a[0].incoming_clrmsg.msg
+                // $b[0].reconstructed_clrmsg.msg
+              ),
+              "send_at": (
+                if $a[0] then
+                  $a[0].unix_time_ns | .[:-9] | tonumber | todate
+                else
+                  null
+                end
+              ),
+              "recv_at": (
+                if $b[0] then
+                  $b[0].unix_time_ns | .[:-9] | tonumber | todate
+                else
+                  null
+                end
+              ),
+              "seconds": (
+                if $a[0] and $b[0] then
+                  "bc:"
+                  + "(" + $b[0].unix_time_ns
+                  + "-" + $a[0].unix_time_ns + ")/1000000000"
+                else
+                  null
+                end
+              ),
+              "extra_send": ([($a | length - 1), 0] | max),
+              "extra_recv": ([($b | length - 1), 0] | max)
+            }
+        '
+      ;;
+      do_encpkg)
+        jq '
+          .
+          | map(select(.event == "outgoing_encpkg")) as $a
+          | map(select(.event == "incoming_encpkg")) as $b
+          | ($b | map(select(.local_psn != $a[0].recipient))) as $c
+          | ($b | map(select(.local_psn == $a[0].recipient))) as $b
+          | {
+              "hash": (
+                $a[0].outgoing_encpkg.hash
+                // $b[0].incoming_encpkg.hash
+                // $c[0].incoming_encpkg.hash
+              ),
+              "sender": (
+                $a[0].local_psn
+              ),
+              "recver": (
+                $a[0].recipient // $b[0].local_psn // $c[0].local_psn
+              ),
+              "send_at": (
+                if $a[0] then
+                  $a[0].unix_time_ns | .[:-9] | tonumber | todate
+                else
+                  null
+                end
+              ),
+              "recv_at": (
+                if $b[0] then
+                  $b[0].unix_time_ns | .[:-9] | tonumber | todate
+                else
+                  null
+                end
+              ),
+              "seconds": (
+                if $a[0] and $b[0] then
+                  "bc:"
+                  + "(" + $b[0].unix_time_ns
+                  + "-" + $a[0].unix_time_ns + ")/1000000000"
+                else
+                  null
+                end
+              ),
+              "sends": (
+                $a | map(
+                  {
+                    "link": .outgoing_link.id,
+                    "wait": (
+                      "bc:"
+                      + "(" + .unix_time_ns
+                      + "-" + $a[0].unix_time_ns + ")/1000000000"
+                    )
+                  }
+                )
+              ),
+              "extra_recv": ([($b | length - 1), 0] | max),
+              "other_recv": ($c | length)
+            }
+        '
+      ;;
+      *)
+        sst_barf "do_summary is unimplemented for prev=$1"
+      ;;
+    esac
+  }; readonly -f do_summary
+
+  #-----------------------------------------------------------------------
+
+  cmd=
+  for x in "${analyses[@]}"; do
+    cmd+="${cmd:+ | }$x"
+  done
+  readonly cmd
+
+  #
+  # We need to run awk on each file separately to detect incomplete lines
+  # in files actively being written to, as we use the property "if a next
+  # line exists, the current line is complete". Concatenating the files
+  # would violate this property.
+  #
+
+  for file in "${files[@]}"; do
+    awk '
+      {
+        if (NR == 1 && /^[[{]/) {
+          json = 1;
+        }
+        if (json) {
+          print;
+        } else {
+          if (event) {
+            print event;
+            event = "";
+          }
+          if (sub(/.*carma_tracing_event:/, "")) {
+            if (sub(/js\\on$/, "")) {
+              print;
+            } else {
+              # No js\on terminator means this might be an incomplete line
+              # in a file actively being written to, so cache it and only
+              # output it upon seeing a subsequent line.
+              event = $0;
+            }
+          }
+        }
+      }
+    ' "$file"
+  done | eval "$cmd"
+
+}; f "$@"

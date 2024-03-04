@@ -1,0 +1,18 @@
+{
+
+  "handler": "sst_ajh_download",
+
+  "hashes": {
+    "md5": "30b66ababceb852ec47ecf93fd370b8d",
+    "sha1": "318fcf488fd46df1beeecc739a933404c94f9ac0",
+    "sha224": "bcd52f48bb23ffd5f3dfccd433216acbef539be8ad057a02cc0f4135",
+    "sha256": "9bea4c8066ef4a1c206b2be5a36302f8926f7fdc6087af5d20b417d0cf103ea6",
+    "sha384": "46168446aa0ac1f87adfd308ddbe14cc3d0ffe338fd3683254bc0343a1d45affeac32de3eed9b3d10635ef7360a4cfa9",
+    "sha512": "da77fa48ca883dacf5ce147b2354e9d957ad66edf72a7103ff5a8611c5cda77b64f1f0ca60491295574ee158cecccfe7797cd36faac5b47e75687400ac60769d"
+  },
+
+  "urls": [
+    "https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp"
+  ]
+
+}

@@ -1,0 +1,58 @@
+#
+# Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+unset -v child
+unset -v d
+unset -v e1
+unset -v e2
+unset -v leaf
+
+sst_expect_source_path "$BASH_SOURCE"
+d=$(sst_get_prefix $BASH_SOURCE)
+
+e1='@(.adoc|.gawk)'
+e2='@(.ag|.ac|.am|.im.in|.in|.im|.m4|)'
+for leaf in ${d}**/*$e1$e2; do
+  sst_expect_source_path "$leaf"
+  sst_ag_process_leaf ${d%/} $leaf child
+done
+
+sst_am_distribute ${d}config.adoc
+
+sst_ihs <<<"
+
+  ${d}diagrams:
+  	\$(AM_V_at)\$(GATBPS_RECIPE_MARKER_TOP)
+  	\$(AM_V_GEN)\$(GATBPS_V_NOP)
+  	\$(GATBPS_at)rm -f -r \$@\$(TSUF)* \$@
+  	\$(GATBPS_at)\$(MKDIR_P) \$@\$(TSUF)1
+  	\$(GATBPS_at)rm -f README.html
+  	\$(GATBPS_at)\$(MAKE) \$(AM_MAKEFLAGS) \\
+  	  ASCIIDOCTOR_FLAGS='-a readme_diagrams=' \\
+  	  README.html \\
+  	;
+  	\$(GATBPS_at)rm -f README.html
+  	\$(GATBPS_at)touch \$@\$(TSUF)1/.gitkeep
+  	\$(GATBPS_at)touch \$@\$(TSUF)1
+  	\$(GATBPS_at)mv -f \$@\$(TSUF)1 \$@
+  	\$(GATBPS_at)-rm -f -r \$@\$(TSUF)*
+  	\$(AM_V_at)\$(GATBPS_RECIPE_MARKER_BOT)
+
+  EXTRA_DIST += ${d}diagrams
+
+" | sst_am_append

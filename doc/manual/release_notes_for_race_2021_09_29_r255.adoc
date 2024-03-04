@@ -1,0 +1,84 @@
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+:geqj_yyyy: 2021
+:geqj_mm: 09
+:geqj_dd: 29
+:geqj_race_version: 1.5.0
+:geqj_artifactory_revision: 255
+
+include::release_notes_for_race_header_3.adoc[]
+
+* {empty}
+CARMA should now automatically recover from broken connections that are
+reported via the `{rsdk_CONNECTION_CLOSED}` or
+`{rsdk_CONNECTION_INIT_FAILED}` events.
+New connections should now be opened in response to these events.
+
+* {empty}
+CARMA now has its first iteration of registration servers.
+The current behavior is that when a client node detects that it has no
+links to its mailbox server, it will create one or more dynamic links
+and send them to its mailbox server via the registration servers.
+Note that this only applies to `{rsdk_CT_INDIRECT}` channels.
+
+* {empty}
+As a summary of this update, CARMA should still function normally when
+given no genesis options, primarily relying on the
+`{rsdk_getLinksForPersonas}` function to discover links.
+In order to test dynamic links (for a `{rsdk_CT_INDIRECT}` channel),
+genesis options such as
+`{rsdk_ta1_custom_args}='{cro_dynamic_only}="client"'` (matches all
+clients) or
+`{rsdk_ta1_custom_args}='{cro_dynamic_only}="client-0000[1-3]"'`
+(matches clients 1 to 3) can be used.
+
+* {empty}
+Added the `{cro_dynamic_only}[=<regex>]` genesis option.
+Currently, this option makes the matching nodes only use dynamic links
+for non-`{rsdk_LT_RECV}` links, except for the purpose of sending
+messages to the registration servers.
+In other words, the matching nodes will never call the
+`{rsdk_getLinksForPersonas}` function for `{rsdk_LT_SEND}` or
+`{rsdk_LT_BIDI}` links for nodes that are not registration servers.
++
+This option can be specified multiple times to specify multiple regular
+expressions to match against.
+Omitting `=<regex>` is equivalent to specifying `=".*"`, which will
+match all nodes.
++
+Note that since RACE names its client nodes `race-client-XXXXX`,
+specifying `{cro_dynamic_only}="client"` is an easy way to match all
+client nodes.
++
+*NB: Only client nodes have dynamic link support at this time.
+Matching a non-client node will cause that node to be unable to send
+messages, which may cause dropped end-to-end messages.*
+
+* {empty}
+Replaced the `--mb-threshold`, `--mc-threshold`, `--mc-good-size`, and
+`--num-mc-groups` genesis options with the `{cro_mb_count}`,
+`{cro_mc_count}`, and `{cro_mc_group_size}` options.
+Also added the `{cro_reg_count}` genesis option to specify the expected
+number of servers that will become registration servers.
++
+These options should usually be omitted so that they use their default
+values.
+The default values are documented in the attached PDF.
+
+//

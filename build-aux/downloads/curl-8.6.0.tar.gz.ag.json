@@ -1,0 +1,18 @@
+{
+
+  "handler": "sst_ajh_download",
+
+  "hashes": {
+    "md5": "6178ea567611c2aaffafc88f91fb4238",
+    "sha1": "ec363b8c17ce83af85f4f18f6c5a2f19efd4e0e3",
+    "sha224": "0c84598b7904f610035033946d4cb669f36eb079582677dafd8434ef",
+    "sha256": "9c6db808160015f30f3c656c0dec125feb9dc00753596bf858a272b5dd8dc398",
+    "sha384": "05fac35fdafd6bdb23bd022a7bb656a72a4b15f4ace0f960041556b1b7fbdff88409e5f503ef24c37fc54fd4629b0223",
+    "sha512": "43fdb6b81b394f3382d353d5f57673b2b3d26cfe34b25d08a526bc0597f508d5298e5a7088d0736d1f139cad19cd922affa51533c3a5a4bb5f2de68891c2958d"
+  },
+
+  "urls": [
+    "https://curl.se/download/curl-8.6.0.tar.gz"
+  ]
+
+}

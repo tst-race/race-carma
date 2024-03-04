@@ -1,0 +1,464 @@
+#! /bin/sh -
+#
+# Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This script uses the SST Bash library to bootstrap from /bin/sh into
+# bash. See the Bash library > Bootstrapping section of the SST manual
+# for more information.
+#
+
+#-----------------------------------------------------------------------
+# Load the prelude
+#-----------------------------------------------------------------------
+
+case ${USE_BUILD_TREE-} in '')
+  set -e || exit $?
+  . '{@}pkgdatadir{@}/bash/sst.bash'
+;; *)
+  case $0 in /*) x=$0 ;; *) x=./$0 ;; esac
+  r='\(.*/\)'
+  x=`expr "$x" : "$r"`. || exit $?
+  set -e || exit $?
+  . "$x/../../../../../src/bash/sst.bash"
+esac
+
+#-----------------------------------------------------------------------
+
+abs_srcdir='{@}abs_srcdir{@}'
+readonly abs_srcdir
+
+#-----------------------------------------------------------------------
+
+# TODO: We should have a collection of CARMA Bash functions in a
+#       directory somewhere.
+
+carma_to_path_slug() {
+
+  declare    c
+  declare    dst
+  declare    i
+  declare    src
+
+  src=$1
+  readonly src
+
+  dst=
+
+  for ((i = 0; i < ${#src}; ++i)); do
+    c=${src:i:1}
+    if [[ "$c" == [-0-9A-Z_a-z] ]]; then
+      dst+=$c
+    else
+      dst+=%$(printf '%02X' "'$c")
+    fi
+  done
+
+  if [[ ! "$dst" ]]; then
+    dst=%
+  fi
+
+  readonly dst
+
+  printf '%s\n' "$dst"
+
+}; readonly -f carma_to_path_slug
+
+#-----------------------------------------------------------------------
+
+carma_stack() {
+
+  cat <<EOF
+Usage: carma stack <command> [<arg>...]
+
+Commands:
+  create  Create a CARMA stack
+  run     Run a CARMA stack
+EOF
+
+  return 1
+
+}; readonly -f carma_stack
+
+#-----------------------------------------------------------------------
+
+generate_configs_path=
+generate_configs() {
+  if [[ "$generate_configs_path" == "" ]]; then
+    if [[ "$abs_srcdir" == "" ]]; then
+      generate_configs_path={@}libexecdir{@}/carma/generate_configs
+    else
+      generate_configs_path={@}abs_builddir{@}/src/core/libexec/kestrel/carma/generate_configs
+    fi
+    readonly generate_configs_path
+  fi
+  "$generate_configs_path" "$@"
+}; readonly -f generate_configs
+
+#-----------------------------------------------------------------------
+
+carma_stack_create() {
+
+  declare    bandwidth_bps
+  declare    base_image
+  declare    config_dir
+  declare    have_bandwidth_bps
+  declare    have_latency_ms
+  declare    i
+  declare    id_g
+  declare    id_u
+  declare    keep_configs
+  declare    latency_ms
+  declare    mix_size
+  declare    num_clients
+  declare    num_servers
+  declare    parse_options
+  declare    rabbitmq_server_host
+  declare    rabbitmq_server_host_je
+  declare    rabbitmq_server_port
+  declare    x
+  declare    y
+
+  bandwidth_bps=
+  have_bandwidth_bps=
+
+  base_image=carma
+
+  config_dir=configs
+
+  keep_configs=
+
+  latency_ms=
+  have_latency_ms=
+
+  rabbitmq_server_host=127.0.0.1
+  rabbitmq_server_port=6672
+
+  parse_options=1
+  set x "$@"
+  while shift && (($# > 0)); do
+
+    if ((parse_options)); then
+
+      #-----------------------------------------------------------------
+      # Options terminator
+      #-----------------------------------------------------------------
+
+      sst_parse_opt -- forbidden : "$@"
+      if ((got)); then
+        eval "$pop"
+        parse_options=0
+        readonly parse_options
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --bandwidth-bps
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --bandwidth-bps required : "$@"
+      if ((got)); then
+        eval "$pop"
+        bandwidth_bps=$arg
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --base-image
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --base-image required : "$@"
+      if ((got)); then
+        eval "$pop"
+        base_image=$arg
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --keep-configs
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --keep-configs forbidden : "$@"
+      if ((got)); then
+        eval "$pop"
+        keep_configs=1
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --latency-ms
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --latency-ms required : "$@"
+      if ((got)); then
+        eval "$pop"
+        latency_ms=$arg
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --mix-size
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --mix-size required : "$@"
+      if ((got)); then
+        eval "$pop"
+        mix_size=$arg
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --num-clients
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --num-clients required : "$@"
+      if ((got)); then
+        eval "$pop"
+        num_clients=$arg
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --num-servers
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --num-servers required : "$@"
+      if ((got)); then
+        eval "$pop"
+        num_servers=$arg
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --rabbitmq-server-host
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --rabbitmq-server-host required : "$@"
+      if ((got)); then
+        eval "$pop"
+        rabbitmq_server_host=$arg
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --rabbitmq-server-port
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --rabbitmq-server-port required : "$@"
+      if ((got)); then
+        eval "$pop"
+        rabbitmq_server_port=$arg
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # Unknown options
+      #-----------------------------------------------------------------
+
+      sst_unknown_opt "$1"
+
+      #-----------------------------------------------------------------
+
+    fi
+
+    x=$(sst_smart_quote "$1")
+    sst_barf "Operands are forbidden: $x"
+
+  done
+  readonly parse_options
+
+  readonly mix_size
+  readonly num_clients
+  readonly num_servers
+  readonly rabbitmq_server_host
+
+  rabbitmq_server_host_je=$(sst_json_escape "$rabbitmq_server_host")
+  readonly rabbitmq_server_host_je
+
+  readonly rabbitmq_server_port
+
+  if ((have_bandwidth_bps)); then
+    bandwidth_bps="\"bandwidth_bps\": $bandwidth_bps,"
+  fi
+  readonly bandwidth_bps
+  readonly have_bandwidth_bps
+
+  readonly base_image
+
+  if [[ "$config_dir" != [./]* ]]; then
+    config_dir=./$config_dir
+  fi
+  readonly config_dir
+
+  readonly keep_configs
+
+  if ((have_latency_ms)); then
+    latency_ms="\"latency_ms\": $latency_ms,"
+  fi
+  readonly latency_ms
+  readonly have_latency_ms
+
+  if ((keep_configs)); then
+    for x in "$config_dir"/*/config.json; do
+      y=$(jq ".MixSize = $mix_size" "$x")
+      printf '%s\n' "$y" >"$x"
+    done
+  else
+    generate_configs \
+      --config-dir="$config_dir" \
+      ${mix_size+--mix-size="$mix_size"} \
+      --no-inter-server-direct-only \
+      ${num_clients+--num-clients="$num_clients"} \
+      ${num_servers+--num-servers="$num_servers"} \
+      --overwrite \
+      --range=mock \
+    ;
+    generate_configs \
+      --config-dir="$config_dir" \
+      --fulfilled-requests="$config_dir"/network-manager-request.json \
+      ${mix_size+--mix-size="$mix_size"} \
+      --no-inter-server-direct-only \
+      ${num_clients+--num-clients="$num_clients"} \
+      ${num_servers+--num-servers="$num_servers"} \
+      --overwrite \
+      --range=mock \
+    ;
+  fi
+
+  cat >docker-compose.yml <<EOF
+version: "3.7"
+services:
+  rabbitmq:
+    image: rabbitmq
+    ports: ["$rabbitmq_server_port:5672"]
+EOF
+
+  image_prefix=$$-
+  image_number=0
+
+  id_u=$(id -u)
+  id_g=$(id -g)
+
+  for dir in "$config_dir"/*/; do
+    dir=${dir%/}
+    slug=${dir##*/}
+
+    if [[ "$slug" == Armadillo* ]]; then
+      role=client
+    else
+      role=server
+    fi
+
+    printf '%s' \
+'{
+  "pseudonym": "'"$slug"'",
+  "rmq_host": "'"$rabbitmq_server_host_je"'",
+  "rmq_port": '"$rabbitmq_server_port"',
+  "rmq_username": "guest",
+  "rmq_password": "guest",
+  '"$latency_ms"'
+  '"$bandwidth_bps"'
+  "etcDirectory": "",
+  "pluginConfigFilePath": "/config"
+}
+' >"$dir"/node.json
+
+    printf '%s' \
+'{
+  "pseudonym": "'"$slug"'",
+  "rmq_host": "'"$rabbitmq_server_host_je"'",
+  "rmq_port": '"$rabbitmq_server_port"',
+  "rmq_username": "guest",
+  "rmq_password": "guest"
+}
+' >"$dir"/whisper.json
+
+    printf '%s' \
+'FROM '"$base_image"'
+CMD : \
+  && sleep 2 \
+  && /usr/bin/carma '"$role"' \
+       /config/node.json \
+       >>/config/race.log \
+       2>&1 \
+;
+' >"$dir"/Dockerfile
+
+    printf '%s' \
+'  '"node$image_number"':
+    build: '"$dir"'
+    image: '"$image_prefix$image_number"'
+    network_mode: host
+    restart: always
+    user: '"$id_u:$id_g"'
+    volumes:
+      - '"$dir"':/config
+' >>docker-compose.yml
+
+    image_number=$((image_number + 1))
+
+  done
+
+}; readonly -f carma_stack_create
+
+#-----------------------------------------------------------------------
+
+carma_stack_create_usage() {
+
+  cat <<"EOF"
+Usage: carma stack create
+EOF
+
+}; readonly -f carma_stack_create_usage
+
+#-----------------------------------------------------------------------
+
+carma_stack_run() {
+
+  docker-compose up \
+    --build \
+    --detach \
+    --force-recreate \
+  ;
+
+}; readonly -f carma_stack_run
+
+#-----------------------------------------------------------------------
+
+if (( $# == 0 )); then
+  carma_stack "$@"
+  exit
+fi
+
+unset commands
+declare -A commands
+commands=(
+  [create]=carma_stack_create
+  [run]=carma_stack_run
+)
+readonly commands
+
+command=$1
+readonly command
+shift
+
+if [[ "${commands[$command]+x}" ]]; then
+  ${commands[$command]} "$@"
+  exit
+fi
+
+command_q=$(sst_quote "$command")
+sst_barf "Unknown command: $command_q"

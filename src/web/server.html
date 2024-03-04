@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+
+  <link rel="stylesheet" href="common.css">
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
+
+  <title>Kestrel</title>
+
+<style>
+
+</style>
+</head>
+
+<body><div id="body_container" style="display: none">
+
+<div class="container text-center mt-4">
+  <div class="row">
+    <div class="col">
+      <h1 class="d-flex justify-content-center align-items-center">
+        <img class="me-2" src="kestrel.svg" style="height: 1em">Kestrel Server
+      </h1>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <h2 id="not_running">Not running</h2>
+      <h2 id="running_as" class="d-none">Running as</h2>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <h2 id="running_psn" class="text-primary placeholder-glow invisible">
+        <span id="running_psn_text" class="d-none">PSN</span><span
+        id="running_psn_bar" class="placeholder col-2"></span>
+      </h2>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">
+      <div id="running_spinner" class="d-flex justify-content-center invisible">
+        <div class="spinner-grow spinner-grow-sm text-primary" role="status">
+          <span class="visually-hidden">Running...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row mt-4">
+    <div class="col">
+      <button id="upload_button_1" type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+        Select Config
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h1 class="modal-title fs-5" id="staticBackdropLabel">Select Config</h1>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group mb-3">
+          <input id="upload_picker" type="file" class="form-control">
+        </div>
+        <div id="upload_warning" class="alert alert-danger d-none" role="alert">
+          Selecting a new config will overwrite your current config.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button id="upload_button_2" type="button" class="btn btn-primary" data-bs-dismiss="modal" disabled>Select</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script src="common.js"></script>
+<script src="server.js"></script>
+<script src="kestrel.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js" integrity="sha512-csNcFYJniKjJxRWRV1R7fvnXrycHP6qDR21mgz1ZP55xY5d+aHLfo9/FcGDQLfn2IfngbAHd8LdfsagcCqgTcQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+</div></body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "handler": "sst_ajh_gitbundle",
+
+  "commit": "004952bb57b2a6d2c033969820c80255e8362615",
+
+  "urls": [
+    "https://github.com/algorand/libsodium.git"
+  ]
+}

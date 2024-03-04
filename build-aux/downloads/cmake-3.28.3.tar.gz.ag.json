@@ -1,0 +1,18 @@
+{
+
+  "handler": "sst_ajh_download",
+
+  "hashes": {
+    "md5": "6b16c82b81e1fd80b63bee9696846b21",
+    "sha1": "cf332727ac863cc0c86ac4f8cd3b711d05a5e417",
+    "sha224": "ba8b58f966a6f15da14c87dfd0ce993c23a89379d13eef4401ff2168",
+    "sha256": "72b7570e5c8593de6ac4ab433b73eab18c5fb328880460c86ce32608141ad5c1",
+    "sha384": "de135fb40abf43262b945f1a47e59d2ab6e89c285d103e8536f8d2cf4479994d94d7e5f2ed60af5caa64c15c6afffdc8",
+    "sha512": "66e923925b764e1fe3d150c69dab3e0abd9e0c90d8e30cab63c3a1f70c3e37df0a5e3ff12b378eeae3bdc6608495f41399e6f81602e26b513b19fa19ff6c48fc"
+  },
+
+  "urls": [
+    "https://github.com/Kitware/CMake/releases/download/v3.28.3/cmake-3.28.3.tar.gz",
+  ""]
+
+}

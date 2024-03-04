@@ -1,0 +1,22 @@
+{
+
+  "handler": "sst_ajh_download",
+
+  "hashes": {
+    "md5": "c239213887804ba00654884918b37441",
+    "sha1": "9668723d65d21a9d13e985203ce8c27ac5ecf3ae",
+    "sha224": "6624a42a205f0d52961704606fd537765fe93104138ff3f9adec5bd0",
+    "sha256": "83c7329fe52c850677d75e5d0b0ca245309b97e8ecbcfdc1dfdc4ab9fac35b39",
+    "sha384": "addca3dd4342b222cdefd339f21963864d65fbeb6123e6f2733454c1614a63f0372870f45e255d19931df48f2d84fff1",
+    "sha512": "bab2b2419319f1feffaba4692f03edbf13b44d1090c6e075a2d69dad67a2d51e64e6edbf83456a26c83900a726d20d2c4ee4ead9c94b322fd0b536f3b5a863c4"
+  },
+
+  "urls": [
+    "https://www.openssl.org/source/openssl-3.2.1.tar.gz",
+    "https://ftp.openssl.org/source/openssl-3.2.1.tar.gz",
+    "https://ftp.openssl.org/source/old/3.2/openssl-3.2.1.tar.gz",
+    "https://mirror.math.princeton.edu/pub/openssl/source/openssl-3.2.1.tar.gz",
+    "https://mirror.math.princeton.edu/pub/openssl/source/old/3.2/openssl-3.2.1.tar.gz",
+  ""]
+
+}

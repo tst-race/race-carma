@@ -1,0 +1,324 @@
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+= **Resilient Anonymous Communication for Everyone (RACE) - CARMA (Network Manager) Guide**
+:toc:
+
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+//
+// The following files are similar:
+//
+//       doc/readme/common.adoc
+//       doc/pages/_includes/common.liquid
+//
+// If you edit one of these files, you may need to edit the other(s) as
+// well.
+//
+
+//
+// The readme_diagrams attribute can be either unset, set to the empty
+// string, or set to any nonempty string. Unset means diagrams are not
+// being generated, the empty string means diagrams are being generated
+// for the distribution archive, and any nonempty string means diagrams
+// are being generated for the source repository.
+//
+
+ifdef::readme_diagrams[]
+ifeval::["{readme_diagrams}" != ""]
+endif::[]
+endif::[]
+ifndef::readme_diagrams[]
+endif::[]
+
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+//
+// This file should roughly mirror the
+// doc/pages/_includes/config.liquid.in file. If you edit this file, you
+// might need to edit that file as well.
+//
+
+:PACKAGE_NAME: Kestrel
+:PACKAGE_TARNAME: kestrel
+:PACKAGE_VERSION: 2.9.1-51+g1169325
+
+//
+
+//
+
+// TODO: This will be implicitly included by doc/readme/common.adoc at
+//       some point.
+ifeval::[0 > 1]
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+endif::[]
+//
+// Note that this file must not have any blank lines until after the
+// list of attributes below this comment, and the file that includes
+// this file must put the include directive after the "= Title" line
+// without any intervening blank lines. This is because we need these
+// attributes to be part of the "document header" for them to have the
+// desired effect, and the document header is implicitly terminated by
+// the first blank line after the "= Title" line.
+//
+:attribute-missing: warn
+:docinfo: shared
+:experimental:
+:nofooter:
+:sectlinks:
+:sectnumlevels: 5
+:sectnums:
+:stem: latexmath
+:toc: left
+:toclevels: 5
+:xrefstyle: short
+
+:sst_subs_normal: specialchars,attributes,quotes,replacements,macros,post_replacements
+:sst_subs_source: specialchars,attributes,quotes,macros
+
+//----------------------------------------------------------------------
+// Special characters
+//----------------------------------------------------------------------
+
+:sst_ellipsis: pass:[&#46;&#46;&#46;]
+:sst_gt: pass:[>]
+:sst_lt: pass:[<]
+
+//----------------------------------------------------------------------
+
+//
+
+
+== **Terminology**
+* Mailbox Server
+* Mixing Committee / Mixers
+
+== **Introduction**
+
+Within the RACE program, Network Manager plugins provide the logic
+that powers the overall distributed network. The system is a
+collection of client and server nodes, and the nodes need to be told
+how to operate. Our Network Manager plugin, CARMA, instructs the nodes in the
+RACE system how to behave. It informs which nodes should be connected
+under which comms channels, the roles they serve, when and how to pass
+messages, and how to perform the proper duties to meet the design
+goals of robustness and anonymity.
+
+The overall approach is to set up mixing committees that perform
+secure multiparty computation-based mixing to achieve unlinkability,
+and then have mailbox servers acts as entry points for clients which
+then forward messages to the mixers.
+
+*High-level Paragraph: State what this plugin accomplishes*
+
+
+=== **Design Goals**
+
+From a cryptographic standpoint, we outline several important design
+goals that our CARMA anonymous messaging system should have: Authenticity, confidentiality, end-to-end encryption, robustness against faults and malicious behavior, unlinkability.
+
+
+
+
+=== **Security Considerations**
+
+This is a research prototype, focused primarily on novel ways of
+achieving mixing for anonymity while maintaining robustness.
+
+When deploying in an actual environment, one must consider who is the adversary, what are you trying to protect, what are your assumptions, and many other considerations.
+
+Stating areas where this system can improve will help guide the reader across potential pitfalls.  It is well known that end-to-end secure messaging is notoriously difficult to get right, especially if one wants to strike a balance between convenience and security.
+
+An independent security audit would be one of the steps towards preparing our results for real-world use.
+
+
+
+== **Scope**
+This developer guide covers the CARMA development model, building artifacts, running, and troubleshooting. It is structured this way to first provide context, associate attributes/features with source files, then guide a developer through the build process.
+
+
+=== **Audience**
+Technical/developer audience.
+
+=== **Environment**
+CARMA supports running on both x86 and arm64 Linux and Android hosts. Only client code is built for Android hosts.
+
+=== **License**
+Licensed under the APACHE 2.0 license, see LICENSE file for more information.
+
+== **How To Build**
+
+=== The Kestrel RACE Artifactory archive
+
+The Kestrel RACE Artifactory archive contains a RACE-specific build of
+all Kestrel plugins (one of which is CARMA), compiled for multiple
+platforms and architectures.
+Here, "RACE-specific" means that each plugin is compiled into a single
+shared object (`.so`) file that implements the small C interface the
+RACE system uses to create and destroy instances of the plugin.
+After it has an instance of the plugin, the RACE system uses the RACE
+{cpp} interface to make calls to the plugin, and the plugin uses the
+interface to make calls to the RACE SDK.
+
+The Kestrel RACE Artifactory archive can be built from any Linux-based
+environment with Docker installed.
+The following code shows how to build it from a fresh Ubuntu system:
+
+[source,sh,subs="{sst_subs_source}"]
+----
+# Install some basic packages.
+sudo apt-get -q -y install \
+  pass:[g++] gawk gcc git make openssl wget xz-utils
+
+# Install Docker and reboot.
+curl -L -S -f -s \https://get.docker.com | sudo sh
+sudo groupadd docker
+sudo usermod -G -a docker $USER
+sudo reboot
+
+# Clone the Kestrel repository.
+git clone \git@github.com:stealthsoftwareinc/kestrel.git
+cd kestrel
+git checkout v{PACKAGE_VERSION}
+
+# This will take a while
+./build.sh
+----
+
+This will produce a `kit` directory suitable for use in a RACE integrated system deployment (inside are artifacts for different node types / architectures and configuration generation utilities).
+
+The `build.sh` script itself wraps several more manual steps laid out below if you prefer to run them individually:
+
+----
+# Pull and alias the RACE Docker images.
+docker login {race_docker_registry}
+v=$(cat build-aux/RACE_VERSION)
+r={race_docker_registry}/race-common
+img1a=$r/race-in-the-box/race-in-the-box:$v
+img1b=$r/racesdk/race-sdk:$v
+r=registry.stealthsoftwareinc.com/stealth/carma
+img2a=$r/race-in-the-box:$v
+img2b=$r/race-sdk-carma:$v
+docker pull $img1a
+docker pull $img1b
+docker tag $img1a $img2a
+docker tag $img1b $img2b
+
+# Build the archive.
+#
+# This may take a while depending on how large you can set
+# DOCKERFILE_THREADS.
+#
+# You can increase DOCKERFILE_THREADS depending on how many CPUs and how
+# much memory you have. It is not recommended to set DOCKERFILE_THREADS
+# any larger than min(N, K/2), where N is how many CPUs you have and K
+# is how much memory you have in GB. It is also not recommended to use
+# the -j option of make if you set DOCKERFILE_THREADS > 1.
+
+./configure
+make src/artifactory DOCKERFILE_THREADS=1
+----
+
+This will produce the file
+`src/artifactory/kestrel-{PACKAGE_VERSION}-artifactory.tar.xz`.
+
+==== **Known Limitations**
+CARMA does not support dynamic enrollment of clients. It can support prestaged enrollment where expected clients have configurations generated and then distributed after the server network has begun running, but it does not currently support truly new clients being enrolled.
+
+== **Additional Reading**
+The `docs` directory contains additional documentation, and the original Kestrel repository can be found at [github.com/stealthsoftwareinc/kestrel-public-staging]().
+
+Additional documentation on general RACE topics (i.e. what RACE is, how to run it locally, and more development details) can be found at:
+
+* link:https://github.com/tst-race/race-quickstart/blob/main/README.md[RACE Quickstart Guide]
+
+* link:https://github.com/tst-race/race-docs/blob/main/what-is-race.md[What is RACE: The Longer Story]
+
+* link:https://github.com/tst-race/race-docs/blob/main/RACE%20developer%20guide.md[Developer Documentation]
+
+* link:https://github.com/tst-race/race-in-the-box/tree/2.6.0/documentation[RIB Documentation]
+
+== **How To Run**
+
+Include in a RACE deployment as the NetworkManager by adding the following arguments to a `rib deployment create` command:
+```
+--network-manager-kit=<kit source for carma>
+```
+*Note:* the deployment will need at least 10 servers to function reliably in order to provide sufficient servers to operate as mixers and mailboxes.
+
+
+== **Troubleshooting**
+=== ** No Control Traffic**
+CARMA has no control traffic, so the only use of comms channels is triggered by routing user messages. This means there should be no network-wide "warm-up" time required - once RIB reports the deployment is started messages can be sent.
+
+=== **Batched Messages**
+CARMA uses batched message mixing to mitigate timing attacks to associate individual client messages going into the mixers with individual messages going out of them; it waits to have a "batch" of at least 4 client messages before any mixing occurs. Therefore, client messages can sometimes be "stranded" at the mixing committee until additional client messages are sent.
+
+=== **Channel Load Balancing**
+CARMA automatically load-balances among different channels, so if it is provided with multiple comms channels it will generate configurations that create redundant links (1 of each channel) and randomly select among those links each time it has a message to send. This means if provided with a faulty comms channel CARMA may _partially_ work on a message-by-message basis.
+
+=== **Open Tracing**
+CARMA's mixing breaks open-tracing based tracking of client messages after they reach the mixing committee. Thus, the path and status of a message can be traced from sender through mailbox server to the mixing committee servers, but not past this point.

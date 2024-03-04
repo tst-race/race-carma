@@ -1,0 +1,36 @@
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+include::define_attributes.adoc[]
+
+:cro_dynamic_only: xref:cro_dynamic_only.adoc#cro_dynamic_only[--dynamic-only]
+:cro_mb_count: --mb-count
+:cro_mc_count: --mc-count
+:cro_mc_group_size: --mc-group-size
+:cro_reg_count: --reg-count
+
+:rsdk_CONNECTION_CLOSED: CONNECTION_CLOSED
+:rsdk_CONNECTION_INIT_FAILED: CONNECTION_INIT_FAILED
+:rsdk_CT_INDIRECT: CT_INDIRECT
+:rsdk_LT_BIDI: LT_BIDI
+:rsdk_LT_RECV: LT_RECV
+:rsdk_LT_SEND: LT_SEND
+:rsdk_getLinksForPersonas: getLinksForPersonas
+:rsdk_ta1_custom_args: --ta1-custom-args
+
+//

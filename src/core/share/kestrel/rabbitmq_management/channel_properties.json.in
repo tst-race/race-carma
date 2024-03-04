@@ -1,0 +1,62 @@
+{
+  "bootstrap": false,
+  "channelGid": "kestrel-rabbitmq_management",
+  "channelStatus": "CHANNEL_ENABLED",
+  "connectionType": "CT_INDIRECT",
+  "creatorExpected": {
+    "receive": {
+      "bandwidth_bps": -1,
+      "latency_ms": -1,
+      "loss": -1
+    },
+    "send": {
+      "bandwidth_bps": -1,
+      "latency_ms": -1,
+      "loss": -1
+    }
+  },
+  "creatorsPerLoader": 1,
+  "currentRole": {
+    "behavioralTags": [],
+    "linkSide": "LS_BOTH",
+    "mechanicalTags": [],
+    "roleName": "default"
+  },
+  "description": "Plugin kestrel-rabbitmq_management (Kestrel version @PACKAGE_VERSION@, RACE version @RACE_VERSION@, Artifactory revision @ARTIFACTORY_REVISION@, RiB version @RIB_VERSION@)",
+  "duration_s": -1,
+  "intervalEndTime": 0,
+  "isFlushable": false,
+  "linkDirection": "LD_LOADER_TO_CREATOR",
+  "loaderExpected": {
+    "receive": {
+      "bandwidth_bps": -1,
+      "latency_ms": -1,
+      "loss": -1
+    },
+    "send": {
+      "bandwidth_bps": -1,
+      "latency_ms": -1,
+      "loss": -1
+    }
+  },
+  "loadersPerCreator": 1,
+  "maxLinks": -1,
+  "maxSendsPerInterval": -1,
+  "mtu": -1,
+  "multiAddressable": false,
+  "period_s": -1,
+  "reliable": false,
+  "roles": [
+    {
+      "behavioralTags": [],
+      "linkSide": "LS_BOTH",
+      "mechanicalTags": [],
+      "roleName": "default"
+    }
+  ],
+  "secondsPerInterval": -1,
+  "sendType": "ST_STORED_ASYNC",
+  "sendsRemainingInInterval": -1,
+  "supported_hints": [],
+  "transmissionType": "TT_UNICAST"
+}

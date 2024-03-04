@@ -1,0 +1,472 @@
+#! /bin/sh -
+#
+# Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# This script uses the SST Bash library to bootstrap from /bin/sh into
+# bash. See the Bash library > Bootstrapping section of the SST manual
+# for more information.
+#
+
+#-----------------------------------------------------------------------
+# Load the prelude
+#-----------------------------------------------------------------------
+
+case ${USE_BUILD_TREE-} in '')
+  set -e || exit $?
+  . '{@}pkgdatadir{@}/bash/sst.bash'
+;; *)
+  case $0 in /*) x=$0 ;; *) x=./$0 ;; esac
+  r='\(.*/\)'
+  x=`expr "$x" : "$r"`. || exit $?
+  set -e || exit $?
+  . "$x/../../../../../src/bash/sst.bash"
+esac
+
+#-----------------------------------------------------------------------
+
+carma_test_mock() {
+
+  declare    arg
+  declare    carma
+  declare    got
+  declare    i
+  declare    image
+  declare    image_given
+  declare    num_messages
+  declare    opt
+  declare    parse_options
+  declare    pop
+  declare    success
+  declare    whisper_sleep_time
+  declare    x
+
+  image_given=
+
+  parse_options=1
+  set x "$@"
+  while shift && (($# > 0)); do
+
+    if ((parse_options)); then
+
+      #-----------------------------------------------------------------
+      # Options terminator
+      #-----------------------------------------------------------------
+
+      sst_parse_opt -- forbidden : "$@"
+      eval "$pop"
+      if ((got)); then
+        parse_options=
+        readonly parse_options
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --help
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --help forbidden : "$@"
+      eval "$pop"
+      if ((got)); then
+        sst_ihs <<<"
+          Usage: carma test [mock]
+        "
+        exit 0
+      fi
+
+      #-----------------------------------------------------------------
+      # --image
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --image : "$@"
+      eval "$pop"
+      if ((got)); then
+        image=$arg
+        image_given=1
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # Unknown options
+      #-----------------------------------------------------------------
+
+      sst_unknown_opt "$1"
+
+      #-----------------------------------------------------------------
+
+    fi
+
+    sst_barf "Operands are forbidden: $1"
+
+  done
+
+  readonly image_given
+
+  num_messages=4
+  readonly num_messages
+
+  whisper_sleep_time=20
+  readonly whisper_sleep_time
+
+  if ((!image_given)); then
+    if [[ "${USE_BUILD_TREE-}" ]]; then
+      image=carma:$(
+        sh build-aux/gatbps-gen-version.sh --docker
+      )
+    else
+      sst_unimplemented
+    fi
+  fi
+  readonly image
+
+  if [[ "${USE_BUILD_TREE-}" ]]; then
+    carma=$abs_builddir/src/core/bin/carma
+  else
+    carma=$bindir/carma
+  fi
+  readonly carma
+
+  "$carma" stack create --base-image="$image"
+  "$carma" stack run
+
+  declare -r sleep_time=30
+  printf '%s\n' "Waiting $sleep_time seconds for the nodes to stabilize..."
+  sleep $sleep_time
+
+  printf '%s\n' "Sending $num_messages messages..."
+  for ((i = 0; i < num_messages; ++i)); do
+    "$carma" whisper \
+      configs/%41rmadillo0/whisper.json \
+      Armadillo1 \
+      hello$i \
+    ;
+  done
+
+  printf '%s\n' "Waiting $whisper_sleep_time seconds for the messages to go through..."
+  sleep $whisper_sleep_time
+
+  success=$(
+    "$carma" trace \
+      --clrmsg \
+      --summary \
+      configs/*/race.log \
+    | jq '.recv_at != null' | jq -r -s 'length > 0 and all'
+  )
+  readonly success
+
+  docker-compose down
+
+  if [[ "$success" == true ]]; then
+    printf '%s\n' "Test successful!"
+    exit 0
+  fi
+
+  printf '%s\n' "Test failed!"
+  exit 1
+
+}; readonly -f carma_test_mock
+
+#-----------------------------------------------------------------------
+
+carma_test_rib() {
+
+  declare    RIB_VERSION
+  declare    args_q
+  declare    bash_lib
+  declare    code_dir
+  declare    code_dir_q
+  declare    i
+  declare    race_home
+  declare    race_home_given
+  declare    rib
+  declare -a rib_files
+  declare    rib_given
+  declare    rib_tries
+  declare    x
+
+  rib=$1
+  shift
+
+  rib_given=$1
+  readonly rib_given
+  shift
+
+  race_home=$1
+  if [[ "$race_home" != /* ]]; then
+    if [[ "$PWD" == / ]]; then
+      race_home=/$race_home
+    else
+      race_home=$PWD/$race_home
+    fi
+  fi
+  readonly race_home
+  shift
+
+  race_home_given=$1
+  readonly race_home_given
+  shift
+
+  RIB_VERSION=@RIB_VERSION@
+  readonly RIB_VERSION
+
+  #---------------------------------------------------------------------
+  # Find RiB
+  #---------------------------------------------------------------------
+
+  if ((rib_given)); then
+    rib_files=("$rib")
+  else
+    rib_files=(
+      rib.sh
+      rib_$RIB_VERSION.sh
+      src/rib/rib.sh
+      src/rib/rib_$RIB_VERSION.sh
+    )
+  fi
+  readonly rib_files
+
+  rib_tries=
+  for ((i = 0; i < ${#rib_files[@]}; ++i)); do
+    rib=${rib_files[i]}
+    if [[ ! -f "$rib" ]]; then
+      rib=$(sst_smart_quote "$rib")
+      rib_tries+="${rib_tries:+, }$rib (file not found)"
+      continue
+    fi
+    x=$(
+      sed -n '
+        /^RIB_VERSION=["'\'']\{0,1\}[0-9.]*["'\'']\{0,1\}$/ {
+          s/^RIB_VERSION=//
+          s/["'\'']//g
+          p
+          q
+        }
+      ' <"$rib"
+    )
+    if [[ "$x" != $RIB_VERSION ]]; then
+      rib=$(sst_smart_quote "$rib")
+      x=$(sst_smart_quote "$x")
+      rib_tries+="${rib_tries:+, }$rib (version is $x)"
+      continue
+    fi
+    break
+  done
+  readonly rib_tries
+  readonly rib
+
+  if ((i == ${#rib_files[@]})); then
+    sst_barf "Can't find RiB $RIB_VERSION: $rib_tries"
+  fi
+
+  #---------------------------------------------------------------------
+  # Find the SST Bash library
+  #---------------------------------------------------------------------
+
+  if [[ "${USE_BUILD_TREE-}" ]]; then
+    bash_lib=$abs_builddir/src/bash
+  else
+    bash_lib=$pkgdatadir/bash
+  fi
+  readonly bash_lib
+
+  #---------------------------------------------------------------------
+  # Prepare the directories to map into RiB
+  #---------------------------------------------------------------------
+
+  code_dir=$sst_tmpdir/code
+  readonly code_dir
+  mkdir "$code_dir"
+
+  mkdir "$code_dir"/bash
+  cp -R \
+    "$bash_lib"/include \
+    "$bash_lib"/sst.bash \
+    "$code_dir"/bash \
+  ;
+
+  if [[ "${USE_BUILD_TREE-}" ]]; then
+    x=$abs_builddir/src/core/libexec/kestrel
+  else
+    x=$pkglibexecdir
+  fi
+  cp "$x"/carma_test_rib_inner.bash "$code_dir"
+
+  if [[ "${USE_BUILD_TREE-}" ]]; then
+    x=$abs_builddir/src/rib-tools
+  else
+    sst_barf
+  fi
+  cp "$x"/test-plan.json "$code_dir"
+
+  #---------------------------------------------------------------------
+  # Start RiB and forward to carma_test_rib_inner.bash
+  #---------------------------------------------------------------------
+
+  code_dir_q=$(sst_smart_quote "$code_dir")
+  readonly code_dir_q
+
+  args_q=
+  for x; do
+    args_q+=${args_q:+ }$(sst_smart_quote "$x")
+  done
+  readonly args_q
+
+  bash -- "$rib" \
+    --code="$code_dir" \
+    ${race_home_given:+--rib_state_path="$race_home/rib"} \
+    --command="sh -- /code/carma_test_rib_inner.bash $args_q" \
+  ;
+
+  #---------------------------------------------------------------------
+
+}; readonly -f carma_test_rib
+
+#-----------------------------------------------------------------------
+
+carma_test() {
+
+  declare    abs_builddir
+  declare    arg
+  declare    bindir
+  declare    got
+  declare    opt
+  declare    parse_options
+  declare    pkgdatadir
+  declare    pkglibexecdir
+  declare    pop
+  declare    race_home
+  declare    race_home_given
+  declare    rib
+  declare    rib_given
+
+  abs_builddir=$(cat <<'/../'
+{@}abs_builddir{@}x
+/../
+  )
+  abs_builddir=${abs_builddir%?}
+  readonly abs_builddir
+
+  bindir=$(cat <<'/../'
+{@}bindir{@}x
+/../
+  )
+  bindir=${bindir%?}
+  readonly bindir
+
+  pkgdatadir=$(cat <<'/../'
+{@}pkgdatadir{@}x
+/../
+  )
+  pkgdatadir=${pkgdatadir%?}
+  readonly pkgdatadir
+
+  pkglibexecdir=$(cat <<'/../'
+{@}pkglibexecdir{@}x
+/../
+  )
+  pkglibexecdir=${pkglibexecdir%?}
+  readonly pkglibexecdir
+
+  rib=
+  rib_given=
+  race_home=
+  race_home_given=
+
+  parse_options=1
+  set x "$@"
+  while shift && (($# > 0)); do
+
+    if ((parse_options)); then
+
+      #-----------------------------------------------------------------
+      # Options terminator
+      #-----------------------------------------------------------------
+
+      sst_parse_opt -- forbidden : "$@"
+      eval "$pop"
+      if ((got)); then
+        parse_options=
+        readonly parse_options
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --help
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --help forbidden : "$@"
+      eval "$pop"
+      if ((got)); then
+        sst_ihs <<<"
+          Usage: carma test [mock]
+             or: carma test [--rib=<file>] [--race-home=<dir>] rib
+        "
+        exit 0
+      fi
+
+      #-----------------------------------------------------------------
+      # --rib
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --rib : "$@"
+      eval "$pop"
+      if ((got)); then
+        rib=$arg
+        rib_given=1
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+      # --race-home
+      #-----------------------------------------------------------------
+
+      sst_parse_opt --race-home : "$@"
+      eval "$pop"
+      if ((got)); then
+        race_home=$arg
+        race_home_given=1
+        continue
+      fi
+
+      #-----------------------------------------------------------------
+
+    fi
+
+    if [[ "$1" == rib ]]; then
+      shift
+      carma_test_rib \
+        "$rib" \
+        "$rib_given" \
+        "$race_home" \
+        "$race_home_given" \
+        "$@" \
+      ;
+      exit
+    fi
+
+    if [[ "$1" == mock ]]; then
+      shift
+    fi
+    break
+
+  done
+  readonly parse_options
+
+  carma_test_mock "$@"
+
+}; readonly -f carma_test
+
+carma_test "$@"

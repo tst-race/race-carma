@@ -1,0 +1,95 @@
+##
+## Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing,
+## software distributed under the License is distributed on an "AS
+## IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+## express or implied. See the License for the specific language
+## governing permissions and limitations under the License.
+##
+## SPDX-License-Identifier: Apache-2.0
+##
+
+##
+## This is the subset of the RACE SDK needed by our mock SDK.
+##
+
+src_sdk_libsdk_la_SOURCES += src/sdk/BootstrapState.h
+src_sdk_libsdk_la_SOURCES += src/sdk/ChannelProperties.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/ChannelProperties.h
+src_sdk_libsdk_la_SOURCES += src/sdk/ChannelRole.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/ChannelRole.h
+src_sdk_libsdk_la_SOURCES += src/sdk/ChannelStatus.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/ChannelStatus.h
+src_sdk_libsdk_la_SOURCES += src/sdk/ClrMsg.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/ClrMsg.h
+src_sdk_libsdk_la_SOURCES += src/sdk/ComponentTypes.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/ComponentTypes.h
+src_sdk_libsdk_la_SOURCES += src/sdk/ConnectionStatus.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/ConnectionStatus.h
+src_sdk_libsdk_la_SOURCES += src/sdk/ConnectionType.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/ConnectionType.h
+src_sdk_libsdk_la_SOURCES += src/sdk/Defer.h
+src_sdk_libsdk_la_SOURCES += src/sdk/DeviceInfo.h
+src_sdk_libsdk_la_SOURCES += src/sdk/EncPkg.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/EncPkg.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IComponentBase.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IComponentSdkBase.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IEncodingComponent.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IEncodingSdk.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IRaceApp.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IRacePluginArtifactManager.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IRacePluginComms.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IRacePluginNM.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IRaceSdkApp.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IRaceSdkArtifactManager.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IRaceSdkCommon.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IRaceSdkComms.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IRaceSdkNM.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IRaceSdkTestApp.h
+src_sdk_libsdk_la_SOURCES += src/sdk/ITransportComponent.h
+src_sdk_libsdk_la_SOURCES += src/sdk/ITransportSdk.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IUserModelComponent.h
+src_sdk_libsdk_la_SOURCES += src/sdk/IUserModelSdk.h
+src_sdk_libsdk_la_SOURCES += src/sdk/LinkParameters.h
+src_sdk_libsdk_la_SOURCES += src/sdk/LinkProperties.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/LinkProperties.h
+src_sdk_libsdk_la_SOURCES += src/sdk/LinkPropertyPair.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/LinkPropertyPair.h
+src_sdk_libsdk_la_SOURCES += src/sdk/LinkPropertySet.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/LinkPropertySet.h
+src_sdk_libsdk_la_SOURCES += src/sdk/LinkStatus.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/LinkStatus.h
+src_sdk_libsdk_la_SOURCES += src/sdk/LinkType.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/LinkType.h
+src_sdk_libsdk_la_SOURCES += src/sdk/MessageStatus.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/MessageStatus.h
+src_sdk_libsdk_la_SOURCES += src/sdk/PackageStatus.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/PackageStatus.h
+src_sdk_libsdk_la_SOURCES += src/sdk/PackageType.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/PackageType.h
+src_sdk_libsdk_la_SOURCES += src/sdk/PluginConfig.h
+src_sdk_libsdk_la_SOURCES += src/sdk/PluginResponse.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/PluginResponse.h
+src_sdk_libsdk_la_SOURCES += src/sdk/PluginStatus.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/PluginStatus.h
+src_sdk_libsdk_la_SOURCES += src/sdk/RaceEnums.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/RaceEnums.h
+src_sdk_libsdk_la_SOURCES += src/sdk/RaceException.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/RaceException.h
+src_sdk_libsdk_la_SOURCES += src/sdk/RaceExport.h
+src_sdk_libsdk_la_SOURCES += src/sdk/RaceLog.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/RaceLog.h
+src_sdk_libsdk_la_SOURCES += src/sdk/RacePluginExports.h
+src_sdk_libsdk_la_SOURCES += src/sdk/SdkResponse.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/SdkResponse.h
+src_sdk_libsdk_la_SOURCES += src/sdk/SendType.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/SendType.h
+src_sdk_libsdk_la_SOURCES += src/sdk/TransmissionType.cpp
+src_sdk_libsdk_la_SOURCES += src/sdk/TransmissionType.h

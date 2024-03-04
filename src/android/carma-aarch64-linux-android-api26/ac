@@ -1,0 +1,70 @@
+dnl
+dnl Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+dnl
+dnl Licensed under the Apache License, Version 2.0 (the "License");
+dnl you may not use this file except in compliance with the License.
+dnl You may obtain a copy of the License at
+dnl
+dnl     http://www.apache.org/licenses/LICENSE-2.0
+dnl
+dnl Unless required by applicable law or agreed to in writing,
+dnl software distributed under the License is distributed on an "AS
+dnl IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+dnl express or implied. See the License for the specific language
+dnl governing permissions and limitations under the License.
+dnl
+dnl SPDX-License-Identifier: Apache-2.0
+dnl
+
+[
+
+]GATBPS_CP(
+  [src/android/carma-$(PACKAGE_VERSION)-aarch64-linux-android-api26.tar],
+  [src/android/carma-aarch64-linux-android-api26.tar])[
+
+]GATBPS_CP(
+  [src/android/carma-$(PACKAGE_VERSION)-aarch64-linux-android-api26.tar.xz],
+  [src/android/carma-aarch64-linux-android-api26.tar.xz])[
+
+]GATBPS_CP(
+  [src/android/carma-aarch64-linux-android-api26$(TMPEXT).tmp.tmp/builder/Dockerfile],
+  [src/android/carma-aarch64-linux-android-api26/builder/Dockerfile])[
+
+]GATBPS_CP(
+  [src/android/carma-aarch64-linux-android-api26$(TMPEXT).tmp.tmp/builder/carma.tar.any],
+  [carma-$(PACKAGE_VERSION).tar.gz])[
+
+]GATBPS_CP(
+  [src/android/carma-aarch64-linux-android-api26$(TMPEXT).tmp.tmp/builder/ndk.zip],
+  [build-aux/downloads/android-ndk-r21d-linux-x86_64.zip])[
+
+]GATBPS_CP(
+  [src/android/carma-aarch64-linux-android-api26$(TMPEXT).tmp.tmp/builder/curl.tar.any],
+  [build-aux/downloads/curl.tar.gz])[
+
+]GATBPS_CP(
+  [src/android/carma-aarch64-linux-android-api26$(TMPEXT).tmp.tmp/builder/openssl.tar.any],
+  [build-aux/downloads/openssl.tar.gz])[
+
+]GATBPS_CP(
+  [src/android/carma-aarch64-linux-android-api26$(TMPEXT).tmp.tmp/builder/libsodium.gitbundle],
+  [build-aux/gitbundles/libsodium.gitbundle])[
+
+]GATBPS_CP(
+  [src/android/carma-aarch64-linux-android-api26$(TMPEXT).tmp.tmp/builder/rabbitmq-c.tar.any],
+  [build-aux/downloads/rabbitmq-c.tar.gz])[
+
+]GATBPS_CP(
+  [src/android/carma-aarch64-linux-android-api26$(TMPEXT).tmp.tmp/builder/sst.tar.any],
+  [build-aux/downloads/sst.tar.gz])[
+
+]GATBPS_TAR(
+  [src/android/carma-aarch64-linux-android-api26.tar],
+  [src/android/carma-aarch64-linux-android-api26$(TMPEXT).tmp],
+  [directory_contents])[
+
+]GATBPS_XZ(
+  [src/android/carma-aarch64-linux-android-api26.tar.xz],
+  [src/android/carma-aarch64-linux-android-api26.tar])[
+
+]

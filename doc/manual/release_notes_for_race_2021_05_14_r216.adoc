@@ -1,0 +1,53 @@
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+:zxgy_yyyy: 2021
+:zxgy_mm: 05
+:zxgy_dd: 14
+:zxgy_race_version: 1.1.5
+:zxgy_artifactory_revision: 216
+
+include::release_notes_for_race_header_1.adoc[]
+
+* {blank}
+New `generate_configs.sh` option: `--mix-size=n`.
+Specifies the mix size.
+The default value is `--mix-size=4`.
+`n` must be at least 4 and must be a square.
+
+* {blank}
+New `generate_configs.sh` option: `--mc-direct-only`.
+Specifies that only direct links should be used between management
+committee (MC) servers.
+
+* {blank}
+New `generate_configs.sh` options: `--mb-threshold=a/b` and
+`--mc-threshold=a/b`.
+Specifies the fraction of servers that will be probabilistically
+selected as mailbox (MB) and management committee (MC) servers.
+The default values are `--mb-threshold=9/32` and `--mc-threshold=16/32`.
+`a` must be nonnegative, `b` must be a power of two, and the sum of both
+thresholds must be at most 1.
+
+* {blank}
+Packages reported as `PACKAGE_RECEIVED` will now stop any further resend
+attempts.
+Packages reported as `PACKAGE_SENT` also currently stop any further
+resend attempts.
+
+//

@@ -1,0 +1,44 @@
+/*
+ * Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS
+ * IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#ifndef KESTREL_CONFIG_H
+#define KESTREL_CONFIG_H
+
+#define CARMA_ARTIFACTORY_REVISION "@ARTIFACTORY_REVISION@"
+
+#define CARMA_RACE_VERSION "@RACE_VERSION@"
+
+#define CARMA_RIB_VERSION "@RIB_VERSION@"
+
+#define CARMA_VERSION "@PACKAGE_VERSION@"
+
+#define KESTREL_ABS_BUILDDIR "{@}abs_builddir{@}"
+#define KESTREL_PKGDATADIR "{@}pkgdatadir{@}"
+
+/*----------------------------------------------------------------------
+// Literal booleans
+//----------------------------------------------------------------------
+//
+// These macros are always set to literal 1 or 0.
+*/
+
+#define CARMA_WITH_MOCK_SDK @WITH_MOCK_SDK@
+
+/*--------------------------------------------------------------------*/
+
+#endif // #ifndef KESTREL_CONFIG_H

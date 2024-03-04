@@ -1,0 +1,8 @@
+{
+
+  "handler": "sst_ajh_download",
+
+  "type": "copy",
+  "file": "build-aux/downloads/cmake-3.28.3.tar.gz",
+
+"":0}

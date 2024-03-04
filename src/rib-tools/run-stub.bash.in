@@ -1,0 +1,112 @@
+#! /bin/bash -
+
+set -E -e -u -o pipefail || exit
+trap exit ERR
+
+if [[ "${1-}" != inside_rib ]]; then
+  exec bash src/rib/rib.sh \
+    --code="$PWD" \
+    --command='bash src/rib-tools/run-stub.bash inside_rib' \
+  ;
+fi
+
+rib docker login
+rib jfrog config
+
+deployment_name=test_local_deployment
+readonly deployment_name
+
+rib deployment down \
+  --mode=local \
+  --name="$deployment_name" \
+  --force \
+|| :
+
+rib deployment remove \
+  --mode=local \
+  --name="$deployment_name" \
+  --force \
+|| :
+
+rib deployment create \
+  --mode=local \
+  --name="$deployment_name" \
+  --linux-server-count=3 \
+  --linux-client-count=3 \
+  --race=@RACE_VERSION@ \
+  --ta1-plugin=PluginTa1TwoSixStub \
+  --ta2-channel=twoSixDirectCpp \
+  --ta2-channel=twoSixIndirectCpp \
+;
+
+deployment_dir=/root/.race/rib/deployments/local/$deployment_name
+readonly deployment_dir
+
+range_file=$deployment_dir/configs/race-config.json
+readonly range_file
+
+plugin_configs_dir=plugin-configs/$deployment_name
+readonly plugin_configs_dir
+
+(
+  cd "$deployment_dir/plugins/PluginTa1TwoSixStub/config-generator"
+
+  bash generate_configs.sh \
+    --range="$range_file" \
+    --config-dir="/configs/$plugin_configs_dir/ta1/PluginTa1TwoSixStub" \
+    --local \
+    --overwrite \
+  ;
+)
+
+(
+  cd "$deployment_dir/plugins/PluginTa2TwoSixStub/channels/twoSixDirectCpp"
+
+  bash generate_configs.sh \
+    --range="$range_file" \
+    --config-dir="/configs/$plugin_configs_dir/ta2/PluginTa2TwoSixStub/twoSixDirectCpp" \
+    --local \
+    --overwrite \
+  ;
+
+  bash start_external_services.sh
+)
+
+(
+  cd "$deployment_dir/plugins/PluginTa2TwoSixStub/channels/twoSixIndirectCpp"
+
+  bash generate_configs.sh \
+    --range="$range_file" \
+    --config-dir="/configs/$plugin_configs_dir/ta2/PluginTa2TwoSixStub/twoSixIndirectCpp" \
+    --local \
+    --overwrite \
+  ;
+
+  bash start_external_services.sh
+)
+
+rib deployment up \
+  --mode=local \
+  --name="$deployment_name" \
+  --ta1-config="$plugin_configs_dir/ta1" \
+  --ta2-config="$plugin_configs_dir/ta2" \
+;
+
+rib deployment start \
+  --mode=local \
+  --name="$deployment_name" \
+;
+
+sleep 10
+
+rib deployment message send-manual \
+  --mode=local \
+  --name="$deployment_name" \
+  --message=hello \
+  --sender=race-client-00001 \
+  --recipient=race-client-00002 \
+;
+
+sleep 10
+
+cat "$deployment_dir/logs/race-client-00002/racetestapp.log"

@@ -1,0 +1,42 @@
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+[#cro_dynamic_only]
+= The `--dynamic-only` option
+
+[source,subs="{sst_subs_source}"]
+----
+{cro_dynamic_only}[=<regex>]
+----
+
+The `{cro_dynamic_only}` option specifies that all nodes whose names
+match `<regex>` will only use dynamic links for non-`{rsdk_LT_RECV}`
+links, except for the purpose of sending messages to the registration
+servers.
+In other words, the matching nodes will never call the
+`{rsdk_getLinksForPersonas}` function for `{rsdk_LT_SEND}` or
+`{rsdk_LT_BIDI}` links for nodes that are not registration servers.
+
+Specifying this option without `<regex>`, i.e., as `{cro_dynamic_only}`,
+is equivalent to specifying `{cro_dynamic_only}=".*"`, which matches all
+nodes.
+
+This option can be specified multiple times to specify multiple regular
+expressions to match against.
+
+//

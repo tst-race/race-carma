@@ -1,0 +1,147 @@
+//
+// Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an "AS
+// IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+// express or implied. See the License for the specific language
+// governing permissions and limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+
+//----------------------------------------------------------------------
+ifdef::define_attributes[]
+ifndef::ATTRIBUTES_CL_STANDARD_C_ENTITIES_ADOC[]
+:ATTRIBUTES_CL_STANDARD_C_ENTITIES_ADOC:
+//----------------------------------------------------------------------
+
+//----------------------------------------------------------------------
+// abort
+//----------------------------------------------------------------------
+
+:cl_abort_url: https://en.cppreference.com/w/c/program/abort
+:cl_abort: link:{cl_abort_url}[abort,window=_blank]
+
+//----------------------------------------------------------------------
+// exit
+//----------------------------------------------------------------------
+
+:cl_exit_url: https://en.cppreference.com/w/c/program/exit
+:cl_exit: link:{cl_exit_url}[exit,window=_blank]
+
+//----------------------------------------------------------------------
+// __FILE__
+//----------------------------------------------------------------------
+
+:cl_FILE_macro_c_url: https://en.cppreference.com/w/c/preprocessor/replace#Predefined_macros
+:cl_FILE_macro_c: link:{cl_FILE_macro_c_url}[__FILE__,window=_blank]
+
+//----------------------------------------------------------------------
+// int8_t
+//----------------------------------------------------------------------
+
+:cl_int8_t_url: https://en.cppreference.com/w/c/types/integer
+:cl_int8_t: link:{cl_int8_t_url}[int8_t,window=_blank]
+
+//----------------------------------------------------------------------
+// int16_t
+//----------------------------------------------------------------------
+
+:cl_int16_t_url: https://en.cppreference.com/w/c/types/integer
+:cl_int16_t: link:{cl_int16_t_url}[int16_t,window=_blank]
+
+//----------------------------------------------------------------------
+// int32_t
+//----------------------------------------------------------------------
+
+:cl_int32_t_url: https://en.cppreference.com/w/c/types/integer
+:cl_int32_t: link:{cl_int32_t_url}[int32_t,window=_blank]
+
+//----------------------------------------------------------------------
+// int64_t
+//----------------------------------------------------------------------
+
+:cl_int64_t_url: https://en.cppreference.com/w/c/types/integer
+:cl_int64_t: link:{cl_int64_t_url}[int64_t,window=_blank]
+
+//----------------------------------------------------------------------
+// __LINE__
+//----------------------------------------------------------------------
+
+:cl_LINE_macro_c_url: https://en.cppreference.com/w/c/preprocessor/replace#Predefined_macros
+:cl_LINE_macro_c: link:{cl_LINE_macro_c_url}[__LINE__,window=_blank]
+
+//----------------------------------------------------------------------
+// main
+//----------------------------------------------------------------------
+
+:cl_c_main_url: https://en.cppreference.com/w/c/language/main_function
+:cl_c_main: link:{cl_c_main_url}[main,window=_blank]
+
+//----------------------------------------------------------------------
+// offsetof
+//----------------------------------------------------------------------
+
+:cl_c_offsetof_url: https://en.cppreference.com/w/c/types/offsetof
+:cl_c_offsetof: link:{cl_c_offsetof_url}[offsetof,window=_blank]
+
+//----------------------------------------------------------------------
+// sizeof
+//----------------------------------------------------------------------
+
+:cl_c_sizeof_url: https://en.cppreference.com/w/c/language/sizeof
+:cl_c_sizeof: link:{cl_c_sizeof_url}[sizeof,window=_blank]
+
+//----------------------------------------------------------------------
+// uint8_t
+//----------------------------------------------------------------------
+
+:cl_uint8_t_url: https://en.cppreference.com/w/c/types/integer
+:cl_uint8_t: link:{cl_uint8_t_url}[uint8_t,window=_blank]
+
+//----------------------------------------------------------------------
+// uint16_t
+//----------------------------------------------------------------------
+
+:cl_uint16_t_url: https://en.cppreference.com/w/c/types/integer
+:cl_uint16_t: link:{cl_uint16_t_url}[uint16_t,window=_blank]
+
+//----------------------------------------------------------------------
+// uint32_t
+//----------------------------------------------------------------------
+
+:cl_uint32_t_url: https://en.cppreference.com/w/c/types/integer
+:cl_uint32_t: link:{cl_uint32_t_url}[uint32_t,window=_blank]
+
+//----------------------------------------------------------------------
+// uint64_t
+//----------------------------------------------------------------------
+
+:cl_uint64_t_url: https://en.cppreference.com/w/c/types/integer
+:cl_uint64_t: link:{cl_uint64_t_url}[uint64_t,window=_blank]
+
+//----------------------------------------------------------------------
+// __VA_ARGS__
+//----------------------------------------------------------------------
+
+:cl_VA_ARGS_c_url: https://en.cppreference.com/w/c/preprocessor/replace
+:cl_VA_ARGS_c: link:{cl_VA_ARGS_c_url}[__VA_ARGS__,window=_blank]
+
+//----------------------------------------------------------------------
+// __VA_OPT__
+//----------------------------------------------------------------------
+
+:cl_VA_OPT_c_url: https://en.cppreference.com/w/c/preprocessor/replace
+:cl_VA_OPT_c: link:{cl_VA_OPT_c_url}[__VA_OPT__,window=_blank]
+
+//----------------------------------------------------------------------
+endif::[]
+endif::[]
+//----------------------------------------------------------------------

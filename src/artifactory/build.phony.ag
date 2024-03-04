@@ -1,0 +1,265 @@
+#
+# Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+sst_expect_source_path "$BASH_SOURCE"
+d=$(sst_get_prefix $BASH_SOURCE)
+
+dst="${d}kestrel-\$(PACKAGE_VERSION)-artifactory"
+
+sst_ihd <<. | sst_ac_append
+
+  GATBPS_CP([${d}ARTIFACTORY_REVISION], [build-aux/ARTIFACTORY_REVISION])
+  GATBPS_CP([${d}RACE_VERSION], [build-aux/RACE_VERSION])
+  GATBPS_CP([${d}RIB_VERSION], [build-aux/RIB_VERSION])
+  GATBPS_CP([${d}VERSION], [build-aux/gatbps-gen-version.sh.cache])
+
+  GATBPS_CP(
+    [${d}carma.tar.gz],
+    [\$(distdir).tar.gz])
+
+  GATBPS_CP(
+    [${d}cmake.tar.gz],
+    [build-aux/downloads/cmake.tar.gz])
+
+  GATBPS_CP(
+    [${d}curl.tar.gz],
+    [build-aux/downloads/curl.tar.gz])
+
+  GATBPS_CP(
+    [${d}gmp.tar.any],
+    [build-aux/downloads/gmp.tar.gz])
+
+  GATBPS_CP(
+    [${d}libsodium.gitbundle],
+    [build-aux/gitbundles/libsodium.gitbundle])
+
+  GATBPS_CP(
+    [${d}ntl.tar.gz],
+    [build-aux/downloads/ntl.tar.gz])
+
+  GATBPS_CP(
+    [${d}openssl.tar.gz],
+    [build-aux/downloads/openssl.tar.gz])
+
+  GATBPS_CP(
+    [${d}rabbitmq.tar.gz],
+    [build-aux/downloads/rabbitmq-c.tar.gz])
+
+  GATBPS_CP(
+    [${d}sqlite.tar.any],
+    [build-aux/downloads/sqlite-autoconf.tar.gz])
+
+  GATBPS_CP(
+    [${d}sst.tar.gz],
+    [build-aux/downloads/sst.tar.gz])
+
+  GATBPS_TAR([$dst.tar], [$dst])
+  GATBPS_XZ([$dst.tar.xz], [$dst.tar])
+
+.
+
+function f {
+
+  local arch
+  local arch2
+  # Bash >=4.2: declare -g d
+  local dockerfile
+  # Bash >=4.2: declare -g dst
+  local extra_args
+  local flags_var
+  local y
+
+  for y; do
+
+    flags_var=${d}${y}_DOCKER_BUILD_FLAGS
+    flags_var=$(sst_underscore_slug "$flags_var")
+
+    if [[ "$y" == *.* ]]; then
+      dockerfile=${y%.*}
+      arch=${y#*.}
+      case $arch in arm64-v8a)
+        arch2=aarch64
+      ;; *)
+        arch2=$arch
+      esac
+      extra_args=
+      extra_args+=" --build-arg CARMA_NDK_ARCH=$arch"
+      extra_args+=" --build-arg CARMA_NDK_ARCH2=$arch2"
+    else
+      dockerfile=$y
+      extra_args=
+    fi
+    dockerfile+=.dockerfile
+
+    sst_ihd <<.
+      $dst.$y: ${d}$dockerfile
+      $dst.$y: ${d}ARTIFACTORY_REVISION
+      $dst.$y: ${d}RACE_VERSION
+      $dst.$y: ${d}RIB_VERSION
+      $dst.$y: ${d}VERSION
+      $dst.$y: ${d}carma.tar.gz
+      $dst.$y: ${d}cmake.tar.gz
+      $dst.$y: ${d}curl.tar.gz
+      $dst.$y: ${d}gmp.tar.any
+      $dst.$y: ${d}libsodium.gitbundle
+      $dst.$y: ${d}manifest.json
+      $dst.$y: ${d}ntl.tar.gz
+      $dst.$y: ${d}openssl.tar.gz
+      $dst.$y: ${d}rabbitmq.tar.gz
+      $dst.$y: ${d}sqlite.tar.any
+      $dst.$y: ${d}sst.tar.gz
+      	\$(AM_V_GEN)\$(GATBPS_RECIPE_MARKER_TOP)
+      	\$(AM_V_at)rm -f -r ./\$@ ./\$@\$(TSUF)*
+      	\$(AM_V_at)\$(MKDIR_P) \$(@D)
+      	\$(AM_V_at)( \\
+      	\\
+      	  set x \$(CFLAGS); \\
+      	  shift; \\
+      	  CFLAGS=\` \\
+      	    sh build-aux/gatbps-echo.sh -q -- "\$\$@" \\
+      	  \` || exit \$\$?; \\
+      	\\
+      	  set x \$(CXXFLAGS); \\
+      	  shift; \\
+      	  CXXFLAGS=\` \\
+      	    sh build-aux/gatbps-echo.sh -q -- "\$\$@" \\
+      	  \` || exit \$\$?; \\
+      	\\
+      	  container=carma-$y-base\$(TSUF); \\
+      	  readonly container; \\
+      	\\
+      	  case \$\${CI_REGISTRY_IMAGE-} in ?*) \\
+      	    image=\$\$CI_REGISTRY_IMAGE/jobs/\$\$CI_JOB_NAME:$y; \\
+      	  ;; *) \\
+      	    image=\$\$container; \\
+      	  esac; \\
+      	  readonly image; \\
+      	\\
+      	  if test -f \$@.base; then \\
+      	    :; \\
+      	  else \\
+      	    \$(DOCKER) build \\
+      	       --file ${d}$dockerfile \\
+      	       --build-arg CARMA_ARTIFACTORY_REVISION=\$(ARTIFACTORY_REVISION) \\
+      	       --build-arg CARMA_RACE_VERSION=\$(RACE_VERSION) \\
+      	       --build-arg CARMA_RIB_VERSION=\$(RIB_VERSION) \\
+      	       --build-arg DOCKERFILE_THREADS=\$(DOCKERFILE_THREADS) \\
+      	       --tag "\$\$image" \\
+      	       $extra_args \\
+      	       \$($flags_var) \\
+      	       ${d}. \\
+      	    || exit \$\$?; \\
+      	    >\$@.base || exit \$\$?; \\
+      	  fi; \\
+      	\\
+      	  \$(DOCKER) build \\
+      	     --file ${d}$dockerfile.loop \\
+      	     --build-arg CARMA_ARTIFACTORY_REVISION=\$(ARTIFACTORY_REVISION) \\
+      	     --build-arg CARMA_IMAGE="\$\$image" \\
+      	     --build-arg CARMA_RACE_VERSION=\$(RACE_VERSION) \\
+      	     --build-arg CARMA_RIB_VERSION=\$(RIB_VERSION) \\
+      	     --build-arg DOCKERFILE_THREADS=\$(DOCKERFILE_THREADS) \\
+      	     --tag "\$\$image-loop" \\
+      	     $extra_args \\
+      	     \$($flags_var) \\
+      	     ${d}. \\
+      	  || exit \$\$?; \\
+      	\\
+      	  \$(DOCKER) rm -f \$\$container || exit \$\$?; \\
+      	\\
+      	  \$(DOCKER) create \\
+      	    --name \$\$container \\
+      	    "\$\$image-loop" \\
+      	    sh \\
+      	  || exit \$\$?; \\
+      	\\
+      	  \$(DOCKER) cp \\
+      	    \$\$container:/x/out \\
+      	    \$@\$(TSUF) \\
+      	  || exit \$\$?; \\
+      	\\
+      	)
+      	\$(AM_V_at)touch \$@\$(TSUF)
+      	\$(AM_V_at)mv -f \$@\$(TSUF) \$@
+      	\$(AM_V_at)\$(GATBPS_RECIPE_MARKER_BOT)
+
+      GATBPS_MOSTLYCLEANFILES += $dst.$y/clean
+.
+  done
+
+  for y; do
+    sst_ihd <<.
+      $dst: $dst.$y
+.
+  done
+  sst_ihd <<.
+    	\$(AM_V_GEN)\$(GATBPS_RECIPE_MARKER_TOP)
+    	\$(AM_V_at)rm -f -r ./\$@ ./\$@\$(TSUF)*
+.
+  for y; do
+    sst_ihd <<.
+      	\$(AM_V_at)\$(MKDIR_P) \$@\$(TSUF)/x.$y
+      	\$(AM_V_at)cp -R $dst.$y \$@\$(TSUF)/x.$y/x
+      	\$(AM_V_at)cp -R \$@\$(TSUF)/x.$y/x \$@\$(TSUF)
+.
+  done
+  sst_ihd <<.
+    	\$(AM_V_at)touch \$@\$(TSUF)/x
+    	\$(AM_V_at)mv -f \$@\$(TSUF)/x \$@
+    	\$(AM_V_at)\$(GATBPS_RECIPE_MARKER_BOT)
+
+    $dst/clean: FORCE
+    	-rm -f -r ./\$(@D) ./\$(@D)\$(TSUF)*
+
+    mostlyclean-local: $dst/clean
+.
+
+}
+
+f \
+  android.arm64-v8a \
+  android.x86_64 \
+  config \
+  linux.arm64-v8a \
+  linux.x86_64 \
+| sst_am_append
+
+sst_am_distribute \
+  ${d}android.dockerfile \
+  ${d}android.dockerfile.loop \
+  ${d}android.dockerfile.make1 \
+  ${d}android.dockerfile.make2 \
+  ${d}build.bash \
+  ${d}build.phony.ag \
+  ${d}config.dockerfile \
+  ${d}config.dockerfile.loop \
+  ${d}config.dockerfile.make1 \
+  ${d}linux.dockerfile \
+  ${d}linux.dockerfile.loop \
+  ${d}linux.dockerfile.make1 \
+  ${d}linux.dockerfile.make2 \
+  ${d}manifest.json \
+  ${d}manifest.kestrel-rabbitmq.json \
+  ${d}push.bash \
+;
+
+sst_ihd <<. | sst_am_append
+
+  ${d%/}: FORCE $dst.tar.xz
+
+.

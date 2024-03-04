@@ -1,0 +1,110 @@
+#
+# Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an "AS
+# IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+# express or implied. See the License for the specific language
+# governing permissions and limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+f() {
+
+  local d
+  local d_slug
+  local name
+
+  sst_expect_source_path "$BASH_SOURCE"
+  d=$(sst_get_prefix $BASH_SOURCE)
+  readonly d
+
+  if [[ ! "$d" ]]; then
+    sst_barf 'This file must live in a subdirectory.'
+  fi
+
+  d_slug=$(sst_underscore_slug "$d")
+  readonly d_slug
+
+  name=${d%/}
+  name=${name##*/}
+  readonly name
+
+  sst_ihs <<<"
+
+    GATBPS_CP(
+      [${d}carma.tar.gz],
+      [\$(distdir).tar.gz])
+
+    GATBPS_CP(
+      [${d}libsodium.gitbundle],
+      [build-aux/gitbundles/libsodium.gitbundle])
+
+    GATBPS_CP(
+      [${d}sqlite.tar.any],
+      [build-aux/downloads/sqlite-autoconf.tar.gz])
+
+    GATBPS_CP(
+      [${d}sst.tar.gz],
+      [build-aux/downloads/sst.tar.gz])
+
+    GATBPS_DOCKER_BUILD(
+      [${d%/}.tar],
+      [${d%/}],
+      [
+        [$name:]AC_PACKAGE_VERSION_DOCKER,
+        [$name:latest],
+      ],
+      [
+        [${d}Dockerfile],
+        [${d}carma.tar.gz],
+        [${d}libsodium.gitbundle],
+        [${d}sqlite.tar.any],
+        [${d}sst.tar.gz],
+      ])
+
+  " | sst_ac_append
+
+  sst_ihs <<<"
+
+    ${d_slug}tar_GATBPS_DOCKER_BUILD_CODE = \\
+      \\
+      set x \$(CFLAGS); \\
+      shift; \\
+      case \$\${1-0} in 0) \\
+        CFLAGS=; \\
+      ;; *) \\
+        CFLAGS=\` \\
+          sh build-aux/gatbps-echo.sh -q -- "\$\$@" \\
+        \` || exit \$\$?; \\
+      esac; \\
+      \\
+      set x \$(CXXFLAGS); \\
+      shift; \\
+      case \$\${1-0} in 0) \\
+        CXXFLAGS=; \\
+      ;; *) \\
+        CXXFLAGS=\` \\
+          sh build-aux/gatbps-echo.sh -q -- "\$\$@" \\
+        \` || exit \$\$?; \\
+      esac; \\
+      \\
+    \$(empty)
+
+    ${d_slug}tar_GATBPS_DOCKER_BUILD_FLAGS = \\
+      --build-arg CARMA_CFLAGS=\"\$\$CFLAGS\" \\
+      --build-arg CARMA_CXXFLAGS=\"\$\$CXXFLAGS\" \\
+    \$(empty)
+
+  " | sst_am_append
+
+  sst_am_distribute ${d}Dockerfile
+
+}; f

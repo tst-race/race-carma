@@ -1,0 +1,60 @@
+#! /bin/bash -
+
+set -E -e -u -o pipefail || exit
+trap exit ERR
+
+rib docker login
+rib jfrog config
+
+deployment_name=x$(date +%s)
+readonly deployment_name
+
+rib deployment create \
+  --mode=local \
+  --name=$deployment_name \
+  --linux-server-count=20 \
+  --linux-client-count=3 \
+  --race=@RACE_VERSION@ \
+  --ta1-plugin=carma:r@ARTIFACTORY_REVISION@:dev \
+  --ta2-channel=twoSixDirectCpp \
+  --ta2-channel=twoSixIndirectCpp \
+;
+
+rib deployment config generate \
+  --force \
+  --name=$deployment_name \
+  --ta1-custom-args='--mc-group-size=6' \
+;
+
+deployment_dir=/root/.race/rib/deployments/local/$deployment_name
+readonly deployment_dir
+
+range_file=$deployment_dir/configs/race-config.json
+readonly range_file
+
+plugin_configs_dir=plugin-configs/$deployment_name
+readonly plugin_configs_dir
+
+rib deployment up \
+  --mode=local \
+  --name=$deployment_name \
+;
+
+rib deployment start \
+  --mode=local \
+  --name=$deployment_name \
+;
+
+sleep 5
+
+cat <<EOF
+
+Commands:
+  * rib test deployment --mode=local --name=$deployment_name --running --test-plan=src/rib-tools/test-plan.json
+  * sed -n 's/.*carma_tracing_event://p' ~/.race/rib/deployments/local/$deployment_name/logs/*/race.log | jq . | less
+  * rib deployment status --mode=local --name=$deployment_name
+  * rib deployment message send-manual --mode=local --name=$deployment_name --sender=race-client-00001 --recipient=race-client-00002 --message=hello
+  * rib deployment stop --mode=local --name=$deployment_name
+  * rib deployment down --mode=local --name=$deployment_name --force
+
+EOF

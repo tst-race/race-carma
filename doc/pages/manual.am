@@ -1,0 +1,34 @@
+##
+## Copyright (C) 2019-2024 Stealth Software Technologies, Inc.
+##
+## Licensed under the Apache License, Version 2.0 (the "License");
+## you may not use this file except in compliance with the License.
+## You may obtain a copy of the License at
+##
+##     http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing,
+## software distributed under the License is distributed on an "AS
+## IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+## express or implied. See the License for the specific language
+## governing permissions and limitations under the License.
+##
+## SPDX-License-Identifier: Apache-2.0
+##
+
+doc_pages_manual_leaves = $(manual_dst).tar.xz
+
+doc/pages/manual: $(manual_dst).tar.xz
+	$(AM_V_at)$(GATBPS_RECIPE_MARKER_TOP)
+	$(AM_V_GEN)$(GATBPS_V_NOP)
+	$(AM_V_at)rm -f -r $@ $@$(TSUF)*
+	$(AM_V_at)$(XZ) -d <$(manual_dst).tar.xz >$@$(TSUF)1
+	$(AM_V_at)$(MKDIR_P) $@$(TSUF)2
+	$(AM_V_at)(cd $@$(TSUF)2 && $(TAR) x) <$@$(TSUF)1
+	$(AM_V_at)cp -R $@$(TSUF)2/* $@$(TSUF)3
+	$(AM_V_at)touch $@$(TSUF)3
+	$(AM_V_at)mv -f $@$(TSUF)3 $@
+	$(AM_V_at)rm -f -r $@$(TSUF)*
+	$(AM_V_at)$(GATBPS_RECIPE_MARKER_BOT)
+
+GATBPS_MOSTLYCLEANFILES += doc/pages/manual/clean
